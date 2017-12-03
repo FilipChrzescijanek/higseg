@@ -19,15 +19,26 @@
             <MenuItem fx:id="fileMenuExit" text="E_xit" onAction="#exit"/>
         </Menu>
         <Menu fx:id="alignMenu" text="_Actions">
+            <MenuItem fx:id="alignMenuCreateModel" text="Create _model" onAction="#createModel"
+                      accelerator="Shortcut+L"/>
             <MenuItem fx:id="alignMenuLoadImages" text="_Load images" onAction="#loadImages"
                       accelerator="Shortcut+L"/>
-            <MenuItem fx:id="alignMenuClearImages" text="_Clear image list" onAction="#clearImages"
-                      accelerator="Shortcut+Shift+Delete"/>
             <MenuItem fx:id="runMenuAlign" text="_Grayscale" onAction="#grayscale" accelerator="F2"/>
             <MenuItem fx:id="runMenuCalculateResults" text="_Threshold" onAction="#threshold"
                       accelerator="F3"/>
         </Menu>
         <Menu fx:id="optionsMenu" text="_Options">
+            <Menu fx:id="optionsMenuStain" text="_Stain">
+                <RadioMenuItem fx:id="optionsMenuStainDab" text="_Diaminobenzidine" onAction="#setDiaminobenzidine"
+                               accelerator="Shortcut+Alt+Shift+B">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="stainToggleGroup"/>
+                    </toggleGroup>
+                </RadioMenuItem>
+                <RadioMenuItem fx:id="optionsMenuStainH" text="_Haematoxylin" onAction="#setHaematoxylin"
+                               toggleGroup="$stainToggleGroup"
+                               accelerator="Shortcut+Alt+Shift+H"/>
+            </Menu>
             <Menu fx:id="optionsMenuTheme" text="_Theme">
                 <RadioMenuItem fx:id="optionsMenuThemeDark" text="_Dark" onAction="#applyDarkTheme"
                                accelerator="Shortcut+Alt+Shift+D">
@@ -49,23 +60,33 @@
         <columnConstraints>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
-            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
         </columnConstraints>
-        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.columnIndex="0" alignment="center">
+        <rowConstraints>
+            <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
+            <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
+        </rowConstraints>
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="center">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="createModelButton" text="Create model" onAction="#createModel"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="loadImagesButton" text="Load images" onAction="#loadImages"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.columnIndex="1" alignment="center">
+        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="grayscaleButton" text="Grayscale" onAction="#grayscale"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignRightVBox" spacing="5" GridPane.columnIndex="2" alignment="center">
+        <VBox fx:id="alignRightVBox" spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>

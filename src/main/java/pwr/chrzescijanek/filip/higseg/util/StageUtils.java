@@ -55,32 +55,14 @@ public final class StageUtils {
 	public static ImageController loadImageStage(final Stage stage, final String viewPath, final String title) {
 		final FXView fxView = new FXView(viewPath);
 		final ImageController controller = (ImageController) fxView.getController();
-		prepareStage(stage, fxView, controller, title);
+		prepareStage(stage, title, fxView);
 		return controller;
 	}
-
-	/**
-	 * Shows given applications' compare view's stage.
-	 *
-	 * @param newStage   stage
-	 * @param fxView     FXML view
-	 * @param controller compare view's controller
-	 * @param title      stage title
-	 */
-	public static void prepareStage(final Stage newStage, final FXView fxView, final ImageController controller,
-	                             final String title) {
-		prepareStage(newStage, title, fxView);
-	}
-
+	
 	private static void setTitleAndIcon(final Stage stage, final String title) {
 		stage.setTitle(title);
 		final Image icon = new Image(StageUtils.class.getResourceAsStream("/images/icon-small.png"));
 		stage.getIcons().add(icon);
-	}
-
-	private static void setPanelScene(final Stage stage, final FXView fxView) {
-		final Parent root = fxView.getView();
-		setScene(stage, root, 720, 360);
 	}
 
 	private static void setScene(final Stage stage, final Parent root, final int width, final int height) {
@@ -108,14 +90,18 @@ public final class StageUtils {
 	 */
 	public static void prepareStage(final Stage stage, final String title, final FXView view) {
 		setTitleAndIcon(stage, title);
-		setScene(stage, view);
+		if (title.equals("higseg")) {
+			setScene(stage, view, 640, 480);
+		} else {
+			setScene(stage, view, 800, 600);
+		}
 	}
 
-	private static void setScene(final Stage stage, final FXView fxView) {
+	private static void setScene(final Stage stage, final FXView fxView, final int width, final int height) {
 		final Parent root = fxView.getView();
 		final Scene scene = new Scene(root, root.minWidth(-1), root.minHeight(-1));
-		stage.setMinWidth(960);
-		stage.setMinHeight(540);
+		stage.setMinWidth(width);
+		stage.setMinHeight(height);
 		stage.setScene(scene);
 	}
 

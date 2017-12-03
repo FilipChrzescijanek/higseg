@@ -47,6 +47,8 @@ public class ImageController extends BaseController implements Initializable {
 	private static final Logger LOGGER = Logger.getLogger(Controller.class.getName());
 
     private final ObjectProperty<Mat> image = new SimpleObjectProperty<>();
+    
+    private boolean markable = false;
 
 	@FXML GridPane root;
     @FXML MenuBar menuBar;
@@ -307,6 +309,10 @@ public class ImageController extends BaseController implements Initializable {
 		alignBottomGrid.visibleProperty().bind(alignImageIsPresent);
 	}
 
+	void setMarkable(boolean markable) {
+		this.markable = markable;
+	}
+	
 	public void setImage(Mat img) {
         image.set(img);
         alignImageSizeLabel.setText(img.cols() + "x" + img.rows() + " px");
@@ -320,8 +326,10 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.scaleYProperty().bind(alignImageView.scaleYProperty());
 		canvas.translateXProperty().bind(alignImageView.translateXProperty());
 		canvas.translateYProperty().bind(alignImageView.translateYProperty());
-		canvas.getGraphicsContext2D().setFill(Color.BEIGE);
-		canvas.getGraphicsContext2D().fillRect(0, 0, 100, 100);
+		if (markable) {
+			canvas.getGraphicsContext2D().setFill(Color.BEIGE);
+			canvas.getGraphicsContext2D().fillRect(0, 0, 100, 100);
+		}
 	}
 
     private Image createImage(final Mat image) {
@@ -331,15 +339,19 @@ public class ImageController extends BaseController implements Initializable {
     }
 
 	void grayscale() {
-        Mat result = new Mat();
-        Imgproc.cvtColor(image.get(), result, Imgproc.COLOR_BGRA2GRAY);
-        image.set(result);
+        if (image.get().channels() == 3) {
+			Mat result = new Mat();
+	        Imgproc.cvtColor(image.get(), result, Imgproc.COLOR_BGR2GRAY);
+	        image.set(result);
+        }
     }
 
     void threshold() {
-        Mat result = new Mat();
-        Imgproc.threshold(image.get(), result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-        image.set(result);
+        if (image.get().channels() == 1) {
+	        Mat result = new Mat();
+	        Imgproc.threshold(image.get(), result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+	        image.set(result);
+        }
     }
 
     void writeImage(File selectedDirectory) {
