@@ -24,9 +24,9 @@ public final class StageUtils {
 	 */
 	public static Alert getAboutDialog() {
 		final Alert alert = new Alert(AlertType.INFORMATION,
-		                              "Global image features analyzer\n" +
+		                              "Histopathological images segmentator\n" +
 		                              "GitHub repository: https://github.com/FilipChrzescijanek/higseg/\n" +
-		                              "\nCopyright © 2016 Filip Chrześcijanek\nfilip.chrzescijanek@gmail.com",
+		                              "\nCopyright © 2018 Filip Chrześcijanek\nfilip.chrzescijanek@gmail.com",
 		                              ButtonType.OK);
 		alert.setTitle("About");
 		alert.setHeaderText("higseg");

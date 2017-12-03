@@ -6,9 +6,12 @@
 <GridPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" styleClass="root" xmlns="http://javafx.com/javafx/8.0.60"
           fx:controller="pwr.chrzescijanek.filip.higseg.controller.Controller">
     <rowConstraints>
-        <RowConstraints vgrow="NEVER"/>
-        <RowConstraints vgrow="ALWAYS"/>
+        <RowConstraints vgrow="NEVER" />
+        <RowConstraints vgrow="ALWAYS" />
     </rowConstraints>
+    <columnConstraints>
+        <ColumnConstraints hgrow="ALWAYS"/>
+    </columnConstraints>
     <MenuBar fx:id="menuBar" GridPane.rowIndex="0">
         <Menu fx:id="fileMenu" text="_File">
             <MenuItem fx:id="fileMenuExportToPng" text="_Save samples" onAction="#exportToPng"
@@ -44,25 +47,25 @@
     </MenuBar>
     <GridPane fx:id="alignMainPane" GridPane.rowIndex="1">
         <columnConstraints>
-            <ColumnConstraints hgrow="NEVER" minWidth="150.0"/>
-            <ColumnConstraints hgrow="ALWAYS"/>
-            <ColumnConstraints minWidth="200.0" prefWidth="200.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
         </columnConstraints>
-        <VBox fx:id="alignLeftVBox" spacing="5">
+        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="loadImagesButton" text="Load images" onAction="#loadImages"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignCenterVBox" spacing="5">
+        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="grayscaleButton" text="Grayscale" onAction="#grayscale"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignRightVBox" spacing="5">
+        <VBox fx:id="alignRightVBox" spacing="5" GridPane.columnIndex="2" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>

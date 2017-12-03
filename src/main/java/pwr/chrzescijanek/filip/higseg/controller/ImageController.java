@@ -20,6 +20,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
@@ -30,6 +31,7 @@ import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.logging.Logger;
 
@@ -175,7 +177,7 @@ public class ImageController extends BaseController implements Initializable {
 	
 	private void setBindings() {
 		setVisibilityBindings();
-        ObjectBinding<Image> binding = Bindings.createObjectBinding(() -> createImage(image.get()), image);
+        ObjectBinding<Image> binding = Bindings.createObjectBinding(() -> image.isNull().get() ? null : createImage(image.get()), image);
 		alignImageView.imageProperty().bind(binding);
 	}
 	
@@ -213,6 +215,7 @@ public class ImageController extends BaseController implements Initializable {
 		alignScaleCombo.itemsProperty().get().addAll(
 			"25%", "50%", "75%", "100%", "125%", "150%", "175%", "200%", "250%", "500%", "1000%"
 		);
+		alignScaleCombo.setValue("100%");
 	}
 	
 	private void initializeStyle() {
@@ -230,9 +233,9 @@ public class ImageController extends BaseController implements Initializable {
 	
 	private void setImageViewGroupListeners(final ImageView imageView, final ScrollPane imageScrollPane,
 	                                        final Group imageViewGroup, final Label mousePositionLabel) {
-		imageViewGroup.setOnMouseMoved(event -> mousePositionLabel.setText(
-				(int) (event.getX() / imageView.getScaleX()) + " : " + (int) (event.getY() / imageView.getScaleY())));
-		imageViewGroup.setOnMouseExited(event -> mousePositionLabel.setText("- : -"));
+		canvas.setOnMouseMoved(event -> mousePositionLabel.setText(
+				(Math.round(event.getX()) + 1) + " : " + (Math.round(event.getY()) + 1)));
+		canvas.setOnMouseExited(event -> mousePositionLabel.setText("- : -"));
 		imageViewGroup.setOnScroll(event -> {
 			if (event.isControlDown() && imageView.getImage() != null) {
 				final double deltaY = event.getDeltaY();
@@ -307,6 +310,18 @@ public class ImageController extends BaseController implements Initializable {
 	public void setImage(Mat img) {
         image.set(img);
         alignImageSizeLabel.setText(img.cols() + "x" + img.rows() + " px");
+        bindCanvas();
+	}
+
+	private void bindCanvas() {
+		canvas.widthProperty().bind(alignImageView.imageProperty().get().widthProperty());
+		canvas.heightProperty().bind(alignImageView.imageProperty().get().heightProperty());
+		canvas.scaleXProperty().bind(alignImageView.scaleXProperty());
+		canvas.scaleYProperty().bind(alignImageView.scaleYProperty());
+		canvas.translateXProperty().bind(alignImageView.translateXProperty());
+		canvas.translateYProperty().bind(alignImageView.translateYProperty());
+		canvas.getGraphicsContext2D().setFill(Color.BEIGE);
+		canvas.getGraphicsContext2D().fillRect(0, 0, 100, 100);
 	}
 
     private Image createImage(final Mat image) {
@@ -327,8 +342,7 @@ public class ImageController extends BaseController implements Initializable {
         image.set(result);
     }
 
-    void writeImage() {
-        final File selectedDirectory = getDirectory(root.getScene().getWindow());
+    void writeImage(File selectedDirectory) {
         if (selectedDirectory != null) {
             if (selectedDirectory.canWrite()) {
                 final Task<Void> task = createWriteImagesTask(selectedDirectory);

@@ -23,6 +23,7 @@ import java.net.URL;
 import java.util.List;
 import java.util.ResourceBundle;
 
+import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getDirectory;
 import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getImageFiles;
 import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
 
@@ -31,7 +32,7 @@ import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
  */
 public class Controller extends BaseController implements Initializable {
 
-	private final ObservableList<ImageController> controllers = FXCollections.observableArrayList();
+	private final ObservableList<ImageController> controllers = FXCollections.synchronizedObservableList(FXCollections.observableArrayList());
 
 	@FXML GridPane root;
 	@FXML MenuBar menuBar;
@@ -130,6 +131,7 @@ public class Controller extends BaseController implements Initializable {
             final Stage newStage = new Stage();
             final String viewPath = "/static/image.fxml";
             final ImageController controller = StageUtils.loadImageStage(newStage, viewPath, fileName);
+            controllers.add(controller);
             newStage.setOnHidden(e -> {
                 controllers.remove(controller);
             });
@@ -143,7 +145,9 @@ public class Controller extends BaseController implements Initializable {
         final Task<? extends Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                Platform.runLater(() -> controllers.forEach(ImageController::exit));
+            	while(!controllers.isEmpty()) {
+            		Platform.runLater(() -> controllers.get(0).exit());
+            	}
                 return null;
             }
         };
@@ -189,7 +193,8 @@ public class Controller extends BaseController implements Initializable {
 	
 	private void setEnablementBindings() {
 		final BooleanBinding noImages = Bindings.isEmpty(controllers);
-		
+
+		fileMenuExportToPng.disableProperty().bind(noImages);
 		alignMenuClearImages.disableProperty().bind(noImages);
 		runMenuAlign.disableProperty().bind(noImages);
 		runMenuCalculateResults.disableProperty().bind(noImages);
@@ -209,10 +214,11 @@ public class Controller extends BaseController implements Initializable {
 
 	@FXML
     void exportToPng() {
+        final File selectedDirectory = getDirectory(root.getScene().getWindow());
         final Task<? extends Void> task = new Task<Void>() {
             @Override
             protected Void call() throws Exception {
-                controllers.forEach(ImageController::writeImage);
+                controllers.forEach(controller -> controller.writeImage(selectedDirectory));
                 return null;
             }
         };
