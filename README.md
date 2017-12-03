@@ -1,0 +1,2 @@
+# higseg
+Histopathological images segmentator

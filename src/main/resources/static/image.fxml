@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.Group?>
+<?import javafx.scene.layout.AnchorPane?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.canvas.Canvas?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.MenuBar?>
+<?import javafx.scene.control.Menu?>
+<?import javafx.scene.control.MenuItem?>
+<GridPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" styleClass="root" xmlns="http://javafx.com/javafx/8.0.60"
+          fx:controller="pwr.chrzescijanek.filip.higseg.controller.ImageController">
+    <rowConstraints>
+        <RowConstraints vgrow="NEVER"/>
+        <RowConstraints vgrow="ALWAYS"/>
+    </rowConstraints>
+    <MenuBar fx:id="menuBar" GridPane.rowIndex="0">
+        <Menu fx:id="fileMenu" text="_File">
+            <MenuItem fx:id="fileMenuExit" text="E_xit" onAction="#exit"/>
+        </Menu>
+        <Menu fx:id="editMenu" text="_Edit">
+            <MenuItem fx:id="editMenuZoomIn" text="Zoom _in" onAction="#zoomIn" accelerator="Shortcut+Add"/>
+            <MenuItem fx:id="editMenuZoomOut" text="Zoom _out" onAction="#zoomOut" accelerator="Shortcut+Subtract"/>
+        </Menu>
+        <Menu fx:id="helpMenu" text="_Help">
+            <MenuItem fx:id="helpMenuHelp" text="_Help" onAction="#help" accelerator="F1"/>
+        </Menu>
+    </MenuBar>
+    <BorderPane fx:id="borderPane" GridPane.rowIndex="1">
+        <top>
+            <HBox fx:id="alignTopHBox" alignment="CENTER">
+                <Label fx:id="alignInfo"
+                       text="Mark areas of stains that you want to be extracted."/>
+            </HBox>
+        </top>
+        <center>
+            <ScrollPane fx:id="alignScrollPane">
+                <Group fx:id="alignImageViewGroup" autoSizeChildren="false">
+                    <AnchorPane fx:id="alignImageViewAnchor" centerShape="false">
+                        <ImageView fx:id="alignImageView" preserveRatio="true"
+                                   AnchorPane.bottomAnchor="0.0"
+                                   AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
+                                   AnchorPane.topAnchor="0.0"/>
+                        <Canvas fx:id="canvas"
+                                AnchorPane.bottomAnchor="0.0"
+                                AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0"
+                                AnchorPane.topAnchor="0.0"/>
+                    </AnchorPane>
+                </Group>
+            </ScrollPane>
+        </center>
+        <bottom>
+            <GridPane fx:id="alignBottomGrid">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="30.0"/>
+                    <ColumnConstraints percentWidth="40.0" halignment="CENTER"/>
+                    <ColumnConstraints percentWidth="15.0" halignment="RIGHT"/>
+                    <ColumnConstraints percentWidth="15.0" halignment="RIGHT"/>
+                </columnConstraints>
+                <rowConstraints>
+                    <RowConstraints minHeight="40.0"/>
+                </rowConstraints>
+                <Label fx:id="alignImageSizeLabel"/>
+                <ComboBox fx:id="alignScaleCombo" editable="true" prefWidth="80.0" visibleRowCount="5"
+                          GridPane.columnIndex="2"/>
+                <Label fx:id="alignMousePositionLabel" text="- : -" GridPane.columnIndex="3"/>
+            </GridPane>
+        </bottom>
+    </BorderPane>
+</GridPane>

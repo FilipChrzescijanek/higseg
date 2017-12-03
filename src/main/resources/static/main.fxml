@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<GridPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" styleClass="root" xmlns="http://javafx.com/javafx/8.0.60"
+          fx:controller="pwr.chrzescijanek.filip.higseg.controller.Controller">
+    <rowConstraints>
+        <RowConstraints vgrow="NEVER"/>
+        <RowConstraints vgrow="ALWAYS"/>
+    </rowConstraints>
+    <MenuBar fx:id="menuBar" GridPane.rowIndex="0">
+        <Menu fx:id="fileMenu" text="_File">
+            <MenuItem fx:id="fileMenuExportToPng" text="_Save samples" onAction="#exportToPng"
+                      accelerator="Shortcut+S"/>
+            <MenuItem fx:id="fileMenuExit" text="E_xit" onAction="#exit"/>
+        </Menu>
+        <Menu fx:id="alignMenu" text="_Actions">
+            <MenuItem fx:id="alignMenuLoadImages" text="_Load images" onAction="#loadImages"
+                      accelerator="Shortcut+L"/>
+            <MenuItem fx:id="alignMenuClearImages" text="_Clear image list" onAction="#clearImages"
+                      accelerator="Shortcut+Shift+Delete"/>
+            <MenuItem fx:id="runMenuAlign" text="_Grayscale" onAction="#grayscale" accelerator="F2"/>
+            <MenuItem fx:id="runMenuCalculateResults" text="_Threshold" onAction="#threshold"
+                      accelerator="F3"/>
+        </Menu>
+        <Menu fx:id="optionsMenu" text="_Options">
+            <Menu fx:id="optionsMenuTheme" text="_Theme">
+                <RadioMenuItem fx:id="optionsMenuThemeDark" text="_Dark" onAction="#applyDarkTheme"
+                               accelerator="Shortcut+Alt+Shift+D">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="themeToggleGroup"/>
+                    </toggleGroup>
+                </RadioMenuItem>
+                <RadioMenuItem fx:id="optionsMenuThemeLight" text="_Light" onAction="#applyLightTheme"
+                               toggleGroup="$themeToggleGroup"
+                               accelerator="Shortcut+Alt+Shift+L"/>
+            </Menu>
+        </Menu>
+        <Menu fx:id="helpMenu" text="_Help">
+            <MenuItem fx:id="helpMenuHelp" text="_Help" onAction="#help" accelerator="F1"/>
+            <MenuItem fx:id="helpMenuAbout" text="_About" onAction="#about"/>
+        </Menu>
+    </MenuBar>
+    <GridPane fx:id="alignMainPane" GridPane.rowIndex="1">
+        <columnConstraints>
+            <ColumnConstraints hgrow="NEVER" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS"/>
+            <ColumnConstraints minWidth="200.0" prefWidth="200.0"/>
+        </columnConstraints>
+        <VBox fx:id="alignLeftVBox" spacing="5">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="loadImagesButton" text="Load images" onAction="#loadImages"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+        <VBox fx:id="alignCenterVBox" spacing="5">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="grayscaleButton" text="Grayscale" onAction="#grayscale"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+        <VBox fx:id="alignRightVBox" spacing="5">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="thresholdButton" text="Threshold" onAction="#threshold"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+    </GridPane>
+</GridPane>
