@@ -26,3 +26,7 @@
 .color-picker {
     -fx-color-label-visible: false;
 }
+
+.modal-dialog {
+    -fx-background-color: #eee;
+}

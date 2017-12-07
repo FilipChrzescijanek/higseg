@@ -8,8 +8,12 @@
     -fx-text-fill: #eee;
 }
 
-.button {
+.button, .radio-button {
     -fx-text-fill: #eee;
+}
+
+.radio-button .dot {
+  -fx-mark-color: #eee;
 }
 
 .tool-bar {
@@ -145,4 +149,8 @@
 
 .tab-label {
     -fx-text-fill: #eee;
+}
+
+.modal-dialog {
+    -fx-background-color: #666;
 }

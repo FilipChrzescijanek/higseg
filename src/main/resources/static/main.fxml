@@ -39,6 +39,17 @@
                                toggleGroup="$stainToggleGroup"
                                accelerator="Shortcut+Alt+Shift+H"/>
             </Menu>
+            <Menu fx:id="optionsMenuModel" text="_Model">
+                <RadioMenuItem fx:id="optionsMenuModelTypeOne" text="Type _One" onAction="#setTypeOne"
+                               accelerator="Shortcut+Alt+Shift+O">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="modelToggleGroup"/>
+                    </toggleGroup>
+                </RadioMenuItem>
+                <RadioMenuItem fx:id="optionsMenuModelTypeTwo" text="Type _Two" onAction="#setTypeTwo"
+                               toggleGroup="$modelToggleGroup"
+                               accelerator="Shortcut+Alt+Shift+T"/>
+            </Menu>
             <Menu fx:id="optionsMenuTheme" text="_Theme">
                 <RadioMenuItem fx:id="optionsMenuThemeDark" text="_Dark" onAction="#applyDarkTheme"
                                accelerator="Shortcut+Alt+Shift+D">

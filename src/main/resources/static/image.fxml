@@ -15,6 +15,9 @@
 <?import javafx.scene.control.MenuBar?>
 <?import javafx.scene.control.Menu?>
 <?import javafx.scene.control.MenuItem?>
+<?import javafx.scene.control.RadioMenuItem?>
+<?import javafx.scene.control.ToggleGroup?>
+<?import javafx.scene.control.RadioButton?>
 <GridPane xmlns:fx="http://javafx.com/fxml/1" fx:id="root" styleClass="root" xmlns="http://javafx.com/javafx/8.0.60"
           fx:controller="pwr.chrzescijanek.filip.higseg.controller.ImageController">
     <rowConstraints>
@@ -28,6 +31,19 @@
         <Menu fx:id="editMenu" text="_Edit">
             <MenuItem fx:id="editMenuZoomIn" text="Zoom _in" onAction="#zoomIn" accelerator="Shortcut+Add"/>
             <MenuItem fx:id="editMenuZoomOut" text="Zoom _out" onAction="#zoomOut" accelerator="Shortcut+Subtract"/>
+        </Menu>
+        <Menu fx:id="optionsMenu" text="_Options">
+            <Menu fx:id="optionsMenuMode" text="_Mode">
+                <RadioMenuItem fx:id="optionsMenuModeMark" text="_Mark" onAction="#setMarkMode"
+                               accelerator="Shortcut+Alt+Shift+M">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="modeToggleGroup"/>
+                    </toggleGroup>
+                </RadioMenuItem>
+                <RadioMenuItem fx:id="optionsMenuModeErase" text="_Erase" onAction="#setEraseMode"
+                               toggleGroup="$modeToggleGroup"
+                               accelerator="Shortcut+Alt+Shift+E"/>
+            </Menu>
         </Menu>
         <Menu fx:id="helpMenu" text="_Help">
             <MenuItem fx:id="helpMenuHelp" text="_Help" onAction="#help" accelerator="F1"/>
@@ -68,6 +84,15 @@
                     <RowConstraints minHeight="40.0"/>
                 </rowConstraints>
                 <Label fx:id="alignImageSizeLabel"/>
+                <HBox fx:id="modeBox" GridPane.columnIndex="1" alignment="CENTER" minHeight="40.0" spacing="30.0">
+                	<RadioButton fx:id="modeMark" text="Mark" onAction="#setMarkMode">
+                    <toggleGroup>
+                        <ToggleGroup fx:id="modeRadioToggleGroup"/>
+                    </toggleGroup>
+	                </RadioButton>
+	                <RadioButton fx:id="modeErase" text="Erase" onAction="#setEraseMode"
+                               toggleGroup="$modeRadioToggleGroup"/>
+                </HBox>
                 <ComboBox fx:id="alignScaleCombo" editable="true" prefWidth="80.0" visibleRowCount="5"
                           GridPane.columnIndex="2"/>
                 <Label fx:id="alignMousePositionLabel" text="- : -" GridPane.columnIndex="3"/>
