@@ -6,7 +6,10 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
 import pwr.chrzescijanek.filip.higseg.controller.ImageController;
 import pwr.chrzescijanek.filip.higseg.view.FXView;
 
@@ -18,6 +21,18 @@ import static javafx.scene.control.Alert.AlertType;
 public final class StageUtils {
 
 	private StageUtils() { }
+
+	/**
+	 * @param window application window
+	 * @return new undecorated modal dialog
+	 */
+	public static Stage initDialog(final Window window) {
+		final Stage dialog = new Stage();
+		dialog.initOwner(window);
+		dialog.initStyle(StageStyle.UNDECORATED);
+		dialog.initModality(Modality.APPLICATION_MODAL);
+		return dialog;
+	}
 
 	/**
 	 * @return about dialog
@@ -91,7 +106,7 @@ public final class StageUtils {
 	public static void prepareStage(final Stage stage, final String title, final FXView view) {
 		setTitleAndIcon(stage, title);
 		if (title.equals("higseg")) {
-			setScene(stage, view, 640, 480);
+			setScene(stage, view, 480, 300);
 		} else {
 			setScene(stage, view, 800, 600);
 		}
@@ -99,9 +114,7 @@ public final class StageUtils {
 
 	private static void setScene(final Stage stage, final FXView fxView, final int width, final int height) {
 		final Parent root = fxView.getView();
-		final Scene scene = new Scene(root, root.minWidth(-1), root.minHeight(-1));
-		stage.setMinWidth(width);
-		stage.setMinHeight(height);
+		final Scene scene = new Scene(root, width, height);
 		stage.setScene(scene);
 	}
 

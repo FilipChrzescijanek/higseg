@@ -1,43 +1,70 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
+import static org.opencv.imgcodecs.Imgcodecs.imencode;
+import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
+
+import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.concurrent.FutureTask;
+import java.util.logging.Logger;
+
+import org.opencv.core.CvType;
+import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
+import org.opencv.imgproc.Imgproc;
+
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.ObjectBinding;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Cursor;
 import javafx.scene.Group;
+import javafx.scene.SnapshotParameters;
 import javafx.scene.canvas.Canvas;
-import javafx.scene.control.*;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
+import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
-import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.imgproc.Imgproc;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
 import pwr.chrzescijanek.filip.higseg.util.ControllerUtils;
-
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Objects;
-import java.util.ResourceBundle;
-import java.util.logging.Logger;
-
-import static org.opencv.imgcodecs.Imgcodecs.imencode;
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getDirectory;
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
+import pwr.chrzescijanek.filip.higseg.util.Coordinates;
+import pwr.chrzescijanek.filip.higseg.util.Decision;
 
 /**
  * Application controller class.
@@ -48,7 +75,7 @@ public class ImageController extends BaseController implements Initializable {
 
     private final ObjectProperty<Mat> image = new SimpleObjectProperty<>();
     
-    private boolean markable = false;
+    private final BooleanProperty markable = new SimpleBooleanProperty(false);
 
 	@FXML GridPane root;
     @FXML MenuBar menuBar;
@@ -57,6 +84,15 @@ public class ImageController extends BaseController implements Initializable {
     @FXML Menu editMenu;
     @FXML MenuItem editMenuZoomIn;
     @FXML MenuItem editMenuZoomOut;
+	@FXML Menu optionsMenu;
+	@FXML Menu optionsMenuMode;
+	@FXML RadioMenuItem optionsMenuModeMark;
+	@FXML ToggleGroup modeToggleGroup;
+	@FXML RadioMenuItem optionsMenuModeErase;
+	@FXML RadioButton modeMark;
+	@FXML ToggleGroup modeRadioToggleGroup;
+	@FXML RadioButton modeErase;
+	@FXML HBox modeBox;
     @FXML Menu helpMenu;
     @FXML MenuItem helpMenuHelp;
     @FXML BorderPane borderPane;
@@ -72,6 +108,18 @@ public class ImageController extends BaseController implements Initializable {
 	@FXML ComboBox<String> alignScaleCombo;
 	@FXML Label alignMousePositionLabel;
 
+	@FXML
+	void setMarkMode() {
+		modeToggleGroup.selectToggle(optionsMenuModeMark);
+		modeRadioToggleGroup.selectToggle(modeMark);
+	}
+	
+	@FXML
+	void setEraseMode() {
+		modeToggleGroup.selectToggle(optionsMenuModeErase);
+		modeRadioToggleGroup.selectToggle(modeErase);
+	}
+	
     @FXML
     void exit() {
         root.getScene().getWindow().hide();
@@ -141,30 +189,6 @@ public class ImageController extends BaseController implements Initializable {
 
 	@Override
 	public void initialize(final URL location, final ResourceBundle resources) {
-		//FXML fields load assertions
-		assert alignImageViewAnchor != null
-				: "fx:id=\"alignImageViewAnchor\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignScaleCombo != null
-				: "fx:id=\"alignScaleCombo\" was not injected: check your FXML file 'image.fxml'.";
-		assert root != null
-				: "fx:id=\"root\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignBottomGrid != null
-				: "fx:id=\"alignBottomGrid\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignImageViewGroup != null
-				: "fx:id=\"alignImageViewGroup\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignTopHBox != null
-				: "fx:id=\"alignTopHBox\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignImageView != null
-				: "fx:id=\"alignImageView\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignImageSizeLabel != null
-				: "fx:id=\"alignImageSizeLabel\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignInfo != null
-				: "fx:id=\"alignInfo\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignMousePositionLabel != null
-				: "fx:id=\"alignMousePositionLabel\" was not injected: check your FXML file 'image.fxml'.";
-		assert alignScrollPane != null
-				: "fx:id=\"alignScrollPane\" was not injected: check your FXML file 'image.fxml'.";
-		
 		initializeComponents(location, resources);
 		setBindings();
 		addListeners();
@@ -187,6 +211,7 @@ public class ImageController extends BaseController implements Initializable {
 		bindScrollPaneSize();
 		initializeStyle();
 		initializeComboBoxes();
+		setMarkMode();
 	}
 
 	private void bindScrollPaneSize() {
@@ -222,6 +247,7 @@ public class ImageController extends BaseController implements Initializable {
 	
 	private void initializeStyle() {
 		injectStylesheets(root);
+		canvas.setOpacity(0.5);
 	}
 	
 	private void setImageViewControls(final ImageView imageView, final ScrollPane imageScrollPane,
@@ -236,7 +262,7 @@ public class ImageController extends BaseController implements Initializable {
 	private void setImageViewGroupListeners(final ImageView imageView, final ScrollPane imageScrollPane,
 	                                        final Group imageViewGroup, final Label mousePositionLabel) {
 		canvas.setOnMouseMoved(event -> mousePositionLabel.setText(
-				(Math.round(event.getX()) + 1) + " : " + (Math.round(event.getY()) + 1)));
+				(((int) event.getX()) + 1) + " : " + (((int) event.getY()) + 1)));
 		canvas.setOnMouseExited(event -> mousePositionLabel.setText("- : -"));
 		imageViewGroup.setOnScroll(event -> {
 			if (event.isControlDown() && imageView.getImage() != null) {
@@ -304,18 +330,20 @@ public class ImageController extends BaseController implements Initializable {
 	
 	private void onAlignImageIsPresent() {
 		final BooleanBinding alignImageIsPresent = alignImageView.imageProperty().isNotNull();
-		alignInfo.visibleProperty().bind(alignImageIsPresent);
+		alignInfo.visibleProperty().bind(markable);
 		alignImageViewGroup.visibleProperty().bind(alignImageIsPresent);
 		alignBottomGrid.visibleProperty().bind(alignImageIsPresent);
+		optionsMenu.visibleProperty().bind(markable);
+		modeBox.visibleProperty().bind(markable);
 	}
 
 	void setMarkable(boolean markable) {
-		this.markable = markable;
+		this.markable.set(markable);
 	}
 	
-	public void setImage(Mat img) {
+	void setImage(Mat img) {
         image.set(img);
-        alignImageSizeLabel.setText(img.cols() + "x" + img.rows() + " px");
+        alignImageSizeLabel.setText(img.width() + "x" + img.height() + " px");
         bindCanvas();
 	}
 
@@ -326,9 +354,9 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.scaleYProperty().bind(alignImageView.scaleYProperty());
 		canvas.translateXProperty().bind(alignImageView.translateXProperty());
 		canvas.translateYProperty().bind(alignImageView.translateYProperty());
-		if (markable) {
-			canvas.getGraphicsContext2D().setFill(Color.BEIGE);
-			canvas.getGraphicsContext2D().fillRect(0, 0, 100, 100);
+		if (markable.get()) {
+			canvas.getGraphicsContext2D().setFill(Color.BLACK);
+			canvas.getGraphicsContext2D().fillOval(0, 5, 36, 30);
 		}
 	}
 
@@ -338,19 +366,62 @@ public class ImageController extends BaseController implements Initializable {
         return new Image(new ByteArrayInputStream(byteMat.toArray()));
     }
 
-	void grayscale() {
+	Map<List<String>, Set<Coordinates>> getInitialMapping() {
         if (image.get().channels() == 3) {
-			Mat result = new Mat();
-	        Imgproc.cvtColor(image.get(), result, Imgproc.COLOR_BGR2GRAY);
-	        image.set(result);
+			Mat rgb = image.get();
+			Mat hsv = new Mat();
+			Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_BGR2HSV_FULL);
+			
+			final int channels     = hsv.channels();
+			final int width        = hsv.width();
+			final int noOfBytes    = (int) hsv.total() * channels;
+			final byte[] imageData = new byte[noOfBytes];
+			
+			hsv.get(0, 0, imageData);
+			
+			Map<List<String>, Set<Coordinates>> initialMapping = new HashMap<>();
+			
+			for (int i = 0; i < imageData.length; i += channels) {
+				List<String> values = Arrays.asList(
+						String.valueOf(Byte.toUnsignedInt(imageData[i + 0])),
+						String.valueOf(Byte.toUnsignedInt(imageData[i + 1])),
+						String.valueOf(Byte.toUnsignedInt(imageData[i + 2])));
+				
+				Set<Coordinates> coordinates = initialMapping.getOrDefault(values, new HashSet<>());
+				coordinates.add(new Coordinates((i / channels) % width, (i / channels) / width));
+				initialMapping.put(values, coordinates);
+			}
+			
+			return initialMapping;
+        }
+        return Collections.emptyMap();
+	}
+
+	void grayscale(Map<TestRecord, Set<Coordinates>> mapping) {
+        if (image.get().channels() == 3) {
+			Mat result = createMat(mapping);
+	        Platform.runLater(() -> image.set(result));
         }
     }
 
-    void threshold() {
+    private Mat createMat(Map<TestRecord, Set<Coordinates>> mapping) {
+    	final byte[] data = new byte[(int) image.get().total()];
+		final int width  = image.get().width();
+    	mapping.forEach((k, v) -> {
+			v.forEach(p -> {
+				data[p.getY() * width + p.getX()] = k.getValue().byteValue();
+			});
+		}); 
+		final Mat result = new Mat(image.get().size(), CvType.CV_8UC1);
+		result.put(0, 0, data);
+		return result;
+	}
+
+	void threshold() {
         if (image.get().channels() == 1) {
 	        Mat result = new Mat();
 	        Imgproc.threshold(image.get(), result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-	        image.set(result);
+	        Platform.runLater(() -> image.set(result));
         }
     }
 
@@ -379,5 +450,60 @@ public class ImageController extends BaseController implements Initializable {
             }
         };
     }
+    
+    List<Record> getRecords(List<String> attributes) {
+    	List<Record> records = new ArrayList<>();
+    	Mat rgb = image.get();
+		Mat hsv = new Mat();
+		Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_BGR2HSV_FULL);
+		
+		final int channels     = hsv.channels();
+		final int width        = hsv.width();
+		final int noOfBytes    = (int) hsv.total() * channels;
+		final byte[] imageData = new byte[noOfBytes];
+		hsv.get(0, 0, imageData);
+		
+		PixelReader pr = getCanvasPixelReader();
+		
+		for (int i = 0; i < imageData.length; i += channels) {
+			Map<String, Double> attributeValues = new HashMap<>();
+			attributeValues.put(attributes.get(0), (double) Byte.toUnsignedInt(imageData[i + 0]));
+			attributeValues.put(attributes.get(1), (double) Byte.toUnsignedInt(imageData[i + 1]));
+			attributeValues.put(attributes.get(2), (double) Byte.toUnsignedInt(imageData[i + 2]));
+			records.add(new Record(isCovered(pr, (i / channels) % width, (i / channels) / width), attributeValues));
+		}
+
+    	return records;
+    }
+
+	private PixelReader getCanvasPixelReader() {
+		final FutureTask<WritableImage> query = getCanvasQuery();
+		Platform.runLater(query);
+		
+		PixelReader pr = null;
+		try {
+			pr = query.get().getPixelReader();
+		} catch (Exception e) {
+            handleException(e, "Reading marked data failed!");
+		}
+		
+		return pr;
+	}
+
+	private FutureTask<WritableImage> getCanvasQuery() {
+		final FutureTask<WritableImage> query = new FutureTask<>(() -> {
+			double currentScale = canvas.getScaleX();			
+			SnapshotParameters snapshotParameters = new SnapshotParameters();
+			snapshotParameters.setTransform(Transform.scale(1.0 / currentScale, 1.0 / currentScale));
+			WritableImage img = canvas.snapshot(snapshotParameters, null);
+			return img;
+		});
+		return query;
+	}
+
+	private String isCovered(PixelReader pr, int x, int y) {
+		return pr.getColor(x, y).equals(Color.WHITE) ? Decision.NO.toString() : Decision.YES.toString();
+	}
+    
 }
 

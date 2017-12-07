@@ -96,6 +96,7 @@ public final class ControllerUtils {
 		box.setSpacing(30.0);
 		box.setAlignment(Pos.CENTER);
 		box.setPadding(new Insets(25));
+		box.getStyleClass().add("modal-dialog");
 		return box;
 	}
 

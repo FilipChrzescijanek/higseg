@@ -8,20 +8,47 @@ import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
+
+import com.google.common.base.Functions;
+
+import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.DataSet;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestDataSet;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
+import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.CustomDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.AttributeReductor;
+import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.ConflictResolver;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneFuzzifier;
+import pwr.chrzescijanek.filip.higseg.util.ControllerUtils;
+import pwr.chrzescijanek.filip.higseg.util.Coordinates;
+import pwr.chrzescijanek.filip.higseg.util.Decision;
 import pwr.chrzescijanek.filip.higseg.util.StageUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.Map.Entry;
+import java.util.stream.Collectors;
 
 import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getDirectory;
 import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getImageFiles;
@@ -49,6 +76,10 @@ public class Controller extends BaseController implements Initializable {
 	@FXML RadioMenuItem optionsMenuStainDab;
 	@FXML ToggleGroup stainToggleGroup;
 	@FXML RadioMenuItem optionsMenuStainH;
+	@FXML Menu optionsMenuModel;
+	@FXML RadioMenuItem optionsMenuModelTypeOne;
+	@FXML ToggleGroup modelToggleGroup;
+	@FXML RadioMenuItem optionsMenuModelTypeTwo;
 	@FXML Menu optionsMenuTheme;
 	@FXML RadioMenuItem optionsMenuThemeDark;
 	@FXML ToggleGroup themeToggleGroup;
@@ -91,6 +122,16 @@ public class Controller extends BaseController implements Initializable {
 	@FXML
 	void setHaematoxylin() {
 		stainToggleGroup.selectToggle(optionsMenuStainH);
+	}
+	
+	@FXML
+	void setTypeOne() {
+		modelToggleGroup.selectToggle(optionsMenuModelTypeOne);
+	}
+	
+	@FXML
+	void setTypeTwo() {
+		modelToggleGroup.selectToggle(optionsMenuModelTypeTwo);
 	}
 	
 	@FXML
@@ -185,8 +226,8 @@ public class Controller extends BaseController implements Initializable {
 	
 	private void initializeComponents(final URL location, final ResourceBundle resources) {
 		initializeStyle();
-		setTooltips();
-		stainToggleGroup.selectToggle(optionsMenuStainDab);
+		setDiaminobenzidine();
+		setTypeTwo();
 	}
 	
 	private void initializeStyle() {
@@ -198,18 +239,6 @@ public class Controller extends BaseController implements Initializable {
 			themeToggleGroup.selectToggle(optionsMenuThemeDark);
 		}
 	}
-
-	
-	private void setTooltips() {
-		setImagesControlsTooltips();
-	}
-	
-	private void setImagesControlsTooltips() {
-		createModelButton.setTooltip(new Tooltip("Create model"));
-		loadImagesButton.setTooltip(new Tooltip("Load images"));
-		grayscaleButton.setTooltip(new Tooltip("Grayscale"));
-		thresholdButton.setTooltip(new Tooltip("Threshold"));
-	}
 	
 	private void setEnablementBindings() {
 		final BooleanBinding noImages = Bindings.isEmpty(controllers);
@@ -220,15 +249,105 @@ public class Controller extends BaseController implements Initializable {
 		grayscaleButton.disableProperty().bind(noImages);
 		thresholdButton.disableProperty().bind(noImages);
 	}
-
+	
 	@FXML
 	void grayscale() {
-        controllers.forEach(ImageController::grayscale);
+		final Stage dialog = showPopup("Converting to grayscale...");
+		startTask(new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				grayscale(dialog);
+				return null;
+			}
+		});
+	}
+	
+	private void grayscale(final Stage dialog) {
+        String clazz = "stain";
+        List<String> clazzValues = Arrays.asList(Decision.YES.toString(), Decision.NO.toString());
+        List<String> attributes  = Arrays.asList("Hue", "Saturation", "Value");
+        
+        Map<String, Double> sharpValues = new HashMap<>();
+        sharpValues.put(Decision.YES.toString(),   0.0);
+        sharpValues.put(Decision.NO.toString(),  255.0);
+        
+        if (!markableControllers.isEmpty()) {  
+	        List<Record> records = Collections.unmodifiableList(
+	        		markableControllers
+	                .parallelStream()
+	        		.flatMap(controller -> controller.getRecords(attributes).stream())
+	        		.collect(Collectors.toList()));
+	        
+	        Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
+	                .withDefuzzifier(new CustomDefuzzifier(sharpValues))
+	        		.build()
+	        		.train(new DataSet(clazz, clazzValues, attributes, records));
+	        
+	        Map<ImageController, Map<List<String>, Set<Coordinates>>> controllersInitialMappings = 
+	        		controllers
+	        		.parallelStream()
+	        		.collect(Collectors.toMap(Function.identity(), controller -> controller.getInitialMapping()));
+	        
+	        Map<List<String>, TestRecord> mapping = getMapping(attributes, controllersInitialMappings);
+	    	List<TestRecord> uniqueTestRecords    = new ArrayList<>(mapping.values());
+			
+	    	c.test(new TestDataSet(attributes, uniqueTestRecords));
+	        
+	        controllersInitialMappings.forEach((controller, initialMapping) -> {
+	        	controller.grayscale(initialMapping.entrySet()
+	        			.parallelStream()
+	        			.collect(Collectors.toMap(e -> mapping.get(e.getKey()), e -> e.getValue())));
+	        });
+        }
+        
+		Platform.runLater(() -> dialog.close());
+	}
+
+	private Map<List<String>, TestRecord> getMapping(List<String> attributes, 
+			Map<ImageController, Map<List<String>, Set<Coordinates>>> controllersInitialMappings) {
+		Map<List<String>, TestRecord> mapping  = new HashMap<>();
+		
+		List<List<String>> uniqueValues = controllersInitialMappings.entrySet()
+				.parallelStream()
+				.flatMap(e -> e.getValue().keySet().stream())
+				.collect(Collectors.toList());
+		
+		for (List<String> values : uniqueValues) {
+			Map<String, Double> attributeValues = new HashMap<>();
+			attributeValues.put(attributes.get(0), Double.parseDouble(values.get(0)));
+			attributeValues.put(attributes.get(1), Double.parseDouble(values.get(1)));
+			attributeValues.put(attributes.get(2), Double.parseDouble(values.get(2)));
+			mapping.put(values, new TestRecord(attributeValues));
+		}
+		
+		return mapping;
 	}
 
 	@FXML
 	void threshold() {
+		final Stage dialog = showPopup("Thresholding...");
+		startTask(new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				threshold(dialog);
+				return null;
+			}
+		});
+	}
+	
+	private void threshold(final Stage dialog) {
         controllers.forEach(ImageController::threshold);
+        Platform.runLater(() -> dialog.close());
+	}
+
+	private Stage showPopup(final String info) {
+		final Stage dialog = StageUtils.initDialog(root.getScene().getWindow());
+		final HBox box = ControllerUtils.getHBoxWithLabelAndProgressIndicator(info);
+		final Scene scene = new Scene(box);
+		injectStylesheets(box);
+		dialog.setScene(scene);
+		dialog.show();
+		return dialog;
 	}
 
 	@FXML
