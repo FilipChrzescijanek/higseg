@@ -1,25 +1,41 @@
 package pwr.chrzescijanek.filip.higseg;
 
-import javafx.application.Application;
-import javafx.application.Platform;
-import javafx.stage.Stage;
-import org.opencv.core.Core;
-import pwr.chrzescijanek.filip.higseg.inject.Injector;
-import pwr.chrzescijanek.filip.higseg.view.FXView;
+import static org.opencv.imgcodecs.Imgcodecs.imwrite;
 
+import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 
-import static pwr.chrzescijanek.filip.higseg.util.StageUtils.prepareStage;
+import org.opencv.core.Core;
+import org.opencv.core.CvException;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+
+import com.beust.jcommander.JCommander;
+import com.beust.jcommander.Parameter;
+
+import javafx.application.Application;
+import javafx.application.Platform;
+import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestDataSet;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
+import pwr.chrzescijanek.filip.higseg.util.Coordinates;
+import pwr.chrzescijanek.filip.higseg.util.Utils;
 
 /**
  * Main application class.
  */
-public class Main extends Application {
+public class Main {
 
 	private static final String LOGGING_FORMAT_PROPERTY = "java.util.logging.SimpleFormatter.format";
 
@@ -32,11 +48,20 @@ public class Main extends Application {
 		System.setProperty(LOGGING_FORMAT_PROPERTY, LOGGING_FORMAT);
 		initializeLogger();
 	}
+    
+	@Parameter(names={"--headless", "-h"},  description = "Headless mode")
+    private boolean headless = false;
+    
+	@Parameter(names={"--input", "-i"},     description = "Input image"  )
+    private String  inputPath  = "";
+	
+	@Parameter(names={"--output", "-o"},    description = "Output image" )
+    private String  outputPath = "";
+    
+	@Parameter(names={"--model", "-m"},     description = "Model file"   )
+    private String  modelPath  = "";
 
-	/**
-	 * Default constructor.
-	 */
-	public Main() { }
+	private Main() { }
 
 	private static void initializeLogger() {
 		try {
@@ -52,33 +77,73 @@ public class Main extends Application {
 	 * Starts the application.
 	 *
 	 * @param args launch arguments
+	 * @throws IOException 
 	 */
-	public static void main(final String... args) {
-		launch(args);
+	public static void main(final String... args) throws IOException {
+		Main main = new Main();
+		JCommander.newBuilder().addObject(main).build().parse(args);
+        main.run(args);
 	}
 
-	/**
-	 * Prepares primary stage and shows GUI.
-	 *
-	 * @param primaryStage application's primary stage
-	 * @throws Exception unhandled exception
-	 */
-	@Override
-	public void start(final Stage primaryStage) throws Exception {
-		final FXView fxView = new FXView("/static/main.fxml");
-		prepareStage(primaryStage, "higseg", fxView);
-		primaryStage.setOnCloseRequest(event -> Platform.exit());
-		primaryStage.show();
+	private void run(final String... args) throws IOException {
+		if (headless) {
+            headless();
+		} else {
+			Application.launch(MainApplication.class, args);
+		}
 	}
 
-	/**
-	 * Resets state on application stop.
-	 *
-	 * @throws Exception unhandled exception
-	 */
-	@Override
-	public void stop() throws Exception {
-		Injector.reset();
+	private void headless() throws IOException {
+		List<String> attributes = Arrays.asList("Hue", "Saturation", "Value");
+		
+		Classifier classifier = tryLoadingClassifier();
+		
+		Mat image = tryLoadingImage();
+		Map<List<String>, Set<Coordinates>> initialMapping = Utils.getInitialMapping(image);
+		Map<List<String>, TestRecord>       resultMapping  = Utils.getMapping(attributes, initialMapping.keySet());
+		
+		List<TestRecord> uniqueTestRecords = new ArrayList<>(resultMapping.values());
+		
+		classifier.test(new TestDataSet(attributes, uniqueTestRecords));
+		
+		Map<TestRecord, Set<Coordinates>> mapping = initialMapping.entrySet()
+				.parallelStream()
+				.collect(Collectors.toMap(e -> resultMapping.get(e.getKey()), e -> e.getValue()));
+		
+		Mat result = Utils.createMat(image, mapping);
+		tryWritingImage(result);
+		
+		Platform.exit();
+	}
+
+	private Classifier tryLoadingClassifier() throws IOException {
+		Classifier c;
+		try {
+			c = Utils.loadModel(new File(modelPath));
+		} catch (IOException e) {
+			throw new IOException("Could not read model file. Path: " + modelPath, e);
+		}
+		return c;
+	}
+
+	private Mat tryLoadingImage() throws IOException {
+		Mat image;
+		try {
+			image = Imgcodecs.imread(new File(inputPath).getCanonicalPath(), Imgcodecs.CV_LOAD_IMAGE_COLOR);
+		} catch (IOException e) {
+			throw new IOException("Could not read input image file. Path: " + inputPath, e);
+		}
+		if (image.dataAddr() == 0)
+			throw new CvException("Failed to load image! Check if file path contains only ASCII symbols");
+		return image;
+	}
+
+	private void tryWritingImage(Mat result) throws IOException {
+		try {
+			imwrite(new File(outputPath).getCanonicalPath(), result);
+		} catch (IOException e) {
+			throw new IOException("Could not write output image file. Path: " + outputPath, e);
+		}
 	}
 
 }

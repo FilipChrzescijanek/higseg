@@ -1,41 +1,12 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
-import javafx.application.Platform;
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.BooleanBinding;
-import javafx.collections.FXCollections;
-import javafx.collections.ObservableList;
-import javafx.concurrent.Task;
-import javafx.fxml.FXML;
-import javafx.fxml.Initializable;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
-import javafx.stage.Stage;
-import org.opencv.core.CvException;
-import org.opencv.core.Mat;
-import org.opencv.imgcodecs.Imgcodecs;
+import static pwr.chrzescijanek.filip.higseg.util.Utils.getDirectory;
+import static pwr.chrzescijanek.filip.higseg.util.Utils.getImageFiles;
+import static pwr.chrzescijanek.filip.higseg.util.Utils.startTask;
 
-import com.google.common.base.Functions;
-
-import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.DataSet;
-import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
-import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestDataSet;
-import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
-import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.CustomDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.AttributeReductor;
-import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.ConflictResolver;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneClassifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneFuzzifier;
-import pwr.chrzescijanek.filip.higseg.util.ControllerUtils;
-import pwr.chrzescijanek.filip.higseg.util.Coordinates;
-import pwr.chrzescijanek.filip.higseg.util.Decision;
-import pwr.chrzescijanek.filip.higseg.util.StageUtils;
-
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -44,23 +15,69 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getDirectory;
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getImageFiles;
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
+import org.opencv.core.CvException;
+import org.opencv.core.Mat;
+import org.opencv.imgcodecs.Imgcodecs;
+
+import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.fxml.FXML;
+import javafx.fxml.Initializable;
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.DialogPane;
+import javafx.scene.control.Label;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.RadioMenuItem;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
+import pwr.chrzescijanek.filip.fuzzyclassifier.AbstractClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.DataSet;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestDataSet;
+import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
+import pwr.chrzescijanek.filip.fuzzyclassifier.model.AbstractModel;
+import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.CustomDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.Defuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.AttributeReductor;
+import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.ConflictResolver;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneFuzzifier;
+import pwr.chrzescijanek.filip.higseg.util.Coordinates;
+import pwr.chrzescijanek.filip.higseg.util.Decision;
+import pwr.chrzescijanek.filip.higseg.util.StageUtils;
+import pwr.chrzescijanek.filip.higseg.util.Utils;
 
 /**
  * Application controller class.
  */
 public class Controller extends BaseController implements Initializable {
-
-	private final ObservableList<ImageController> controllers = FXCollections.observableArrayList();
+	
+	private static final String DEFAULT_INFO = "Default models loaded.";
+	
+	private final ObservableList<ImageController> controllers         = FXCollections.observableArrayList();
 	private final ObservableList<ImageController> markableControllers = FXCollections.observableArrayList();
+	
+	private final ObjectProperty<Classifier> classifier = new SimpleObjectProperty<>();
 
 	@FXML GridPane root;
 	@FXML MenuBar menuBar;
@@ -69,6 +86,10 @@ public class Controller extends BaseController implements Initializable {
 	@FXML MenuItem fileMenuExit;
 	@FXML Menu alignMenu;
 	@FXML MenuItem alignMenuLoadImages;
+	@FXML MenuItem alignMenuCreateModel;
+	@FXML MenuItem alignMenuSaveModel;
+	@FXML MenuItem alignMenuLoadModel;
+	@FXML MenuItem alignMenuUnloadModel;
 	@FXML MenuItem runMenuAlign;
 	@FXML MenuItem runMenuCalculateResults;
 	@FXML Menu optionsMenu;
@@ -88,6 +109,8 @@ public class Controller extends BaseController implements Initializable {
 	@FXML MenuItem helpMenuHelp;
 	@FXML MenuItem helpMenuAbout;
 	@FXML GridPane alignMainPane;
+	@FXML Button loadModelButton;
+	@FXML Button saveModelButton;
 	@FXML Button createModelButton;
 	@FXML VBox alignLeftVBox;
 	@FXML Button loadImagesButton;
@@ -95,6 +118,7 @@ public class Controller extends BaseController implements Initializable {
 	@FXML Button grayscaleButton;
 	@FXML VBox alignRightVBox;
 	@FXML Button thresholdButton;
+	@FXML Label info;
 
 	@FXML
 	void about() {
@@ -137,6 +161,76 @@ public class Controller extends BaseController implements Initializable {
 	@FXML
 	void exit() {
 		root.getScene().getWindow().hide();
+	}
+	
+	@FXML
+	void saveModel() {
+		final File file = Utils.saveModelFile(root.getScene().getWindow());
+		if (file != null) {
+			final Stage dialog = showPopup("Saving model...");
+			startTask(new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					try {  
+			            saveModel(file);
+					} catch (IOException e) {
+						handleException(e, "Saving failed!\nPlease check your write permissions.");
+					}
+					Platform.runLater(() -> dialog.close());
+					return null;
+				}
+			});
+		}
+	}
+
+	private void saveModel(final File file) throws IOException {
+		List<String> attributes  = Arrays.asList("Hue", "Saturation", "Value");
+		AbstractClassifier classifier = (AbstractClassifier) buildClassifier(attributes);
+		
+		try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
+			AbstractModel model = (AbstractModel) classifier.getModel();
+			bw.write(classifier instanceof TypeOneClassifier ? "1" : "2");
+			bw.newLine();
+			bw.write(model.getClazzValues().toString());
+			bw.newLine();
+			bw.write(model.getRules().toString());
+			bw.newLine();
+			bw.write(model.getStats().getMeans().toString());
+			bw.newLine();
+			bw.write(model.getStats().getVariances().toString());
+			Defuzzifier defuzzifier = classifier.getDefuzzifier();
+			if (defuzzifier instanceof CustomDefuzzifier) {
+				bw.newLine();
+				bw.write(((CustomDefuzzifier) defuzzifier).getSharpValues().toString());
+			}
+		}
+	}
+	
+	@FXML
+	void unloadModel() {
+		classifier.set(null);
+		info.setText(DEFAULT_INFO);
+	}
+	
+	@FXML
+	void loadModel() {
+		final File file = Utils.getModelFile(root.getScene().getWindow());
+		if (file != null) {
+			final Stage dialog = showPopup("Loading model...");
+			startTask(new Task<Void>() {
+				@Override
+				protected Void call() throws Exception {
+					try {
+						classifier.set(Utils.loadModel(file));
+						Platform.runLater(() -> info.setText("Currently loaded model: " + file.getName()));
+					} catch (IOException e) {
+						handleException(e, "Loading failed!\nPlease check file path and your read permissions.");
+					}
+					Platform.runLater(() -> dialog.close());
+					return null;
+				}
+			});
+		}
 	}
 	
 	@FXML
@@ -222,12 +316,14 @@ public class Controller extends BaseController implements Initializable {
 	
 	private void setBindings() {
 		setEnablementBindings();
+		info.visibleProperty().bind(Bindings.isEmpty(markableControllers));
 	}
 	
 	private void initializeComponents(final URL location, final ResourceBundle resources) {
 		initializeStyle();
 		setDiaminobenzidine();
 		setTypeTwo();
+		info.setText(DEFAULT_INFO);
 	}
 	
 	private void initializeStyle() {
@@ -241,13 +337,24 @@ public class Controller extends BaseController implements Initializable {
 	}
 	
 	private void setEnablementBindings() {
-		final BooleanBinding noImages = Bindings.isEmpty(controllers);
+		final BooleanBinding noImages    = Bindings.isEmpty(controllers);
+		final BooleanBinding creating = Bindings.isNotEmpty(markableControllers);
+		final BooleanBinding modelLoaded = Bindings.isNotNull(classifier);
+		final BooleanBinding cannotSave  = Bindings.not(creating);
 
-		fileMenuExportToPng.disableProperty().bind(noImages);
-		runMenuAlign.disableProperty().bind(noImages);
+		fileMenuExportToPng    .disableProperty().bind(noImages);
+		runMenuAlign           .disableProperty().bind(noImages);
 		runMenuCalculateResults.disableProperty().bind(noImages);
-		grayscaleButton.disableProperty().bind(noImages);
-		thresholdButton.disableProperty().bind(noImages);
+		grayscaleButton        .disableProperty().bind(noImages);
+		thresholdButton        .disableProperty().bind(noImages);
+		thresholdButton        .disableProperty().bind(noImages);
+		loadModelButton        .disableProperty().bind(creating);
+		alignMenuUnloadModel   .disableProperty().bind(Bindings.not(modelLoaded));
+		alignMenuLoadModel     .disableProperty().bind(creating);
+		saveModelButton        .disableProperty().bind(cannotSave);
+		alignMenuSaveModel     .disableProperty().bind(cannotSave);
+		optionsMenuStain       .disableProperty().bind(Bindings.or(creating, modelLoaded));
+		optionsMenuModel       .disableProperty().bind(Bindings.and(Bindings.not(creating), modelLoaded));
 	}
 	
 	@FXML
@@ -263,26 +370,10 @@ public class Controller extends BaseController implements Initializable {
 	}
 	
 	private void grayscale(final Stage dialog) {
-        String clazz = "stain";
-        List<String> clazzValues = Arrays.asList(Decision.YES.toString(), Decision.NO.toString());
         List<String> attributes  = Arrays.asList("Hue", "Saturation", "Value");
+        Classifier c = chooseClassifier(attributes);
         
-        Map<String, Double> sharpValues = new HashMap<>();
-        sharpValues.put(Decision.YES.toString(),   0.0);
-        sharpValues.put(Decision.NO.toString(),  255.0);
-        
-        if (!markableControllers.isEmpty()) {  
-	        List<Record> records = Collections.unmodifiableList(
-	        		markableControllers
-	                .parallelStream()
-	        		.flatMap(controller -> controller.getRecords(attributes).stream())
-	        		.collect(Collectors.toList()));
-	        
-	        Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
-	                .withDefuzzifier(new CustomDefuzzifier(sharpValues))
-	        		.build()
-	        		.train(new DataSet(clazz, clazzValues, attributes, records));
-	        
+        if (c != null) {     
 	        Map<ImageController, Map<List<String>, Set<Coordinates>>> controllersInitialMappings = 
 	        		controllers
 	        		.parallelStream()
@@ -303,24 +394,72 @@ public class Controller extends BaseController implements Initializable {
 		Platform.runLater(() -> dialog.close());
 	}
 
+	private Classifier chooseClassifier(List<String> attributes) {
+		Classifier c = null;
+		
+        if (!markableControllers.isEmpty()) {
+	        c = buildClassifier(attributes);
+        } else if (!Objects.isNull(classifier.get())) {
+        	c = classifier.get();
+        } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainDab.isSelected()) {	//@TODO
+        	try {
+				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+			} catch (IOException e) {
+				handleException(e, "Loading default type two DAB model failed!");
+			}
+        } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainH.isSelected()) {
+        	try {
+				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+			} catch (IOException e) {
+				handleException(e, "Loading default type two H model failed!");
+			}
+        } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainDab.isSelected()) {
+        	try {
+				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+			} catch (IOException e) {
+				handleException(e, "Loading default type one DAB model failed!");
+			}
+        } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainH.isSelected()) {
+        	try {
+				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+			} catch (IOException e) {
+				handleException(e, "Loading default type one H model failed!");
+			}
+        }
+        
+		return c;
+	}
+
+	private Classifier buildClassifier(List<String> attributes) {  
+        String clazz = "stain";
+        List<String> clazzValues = Arrays.asList(Decision.YES.toString(), Decision.NO.toString());
+        
+        Map<String, Double> sharpValues = new HashMap<>();
+        sharpValues.put(Decision.YES.toString(),   0.0);
+        sharpValues.put(Decision.NO.toString(),  255.0);
+        
+		List<Record> records = Collections.unmodifiableList(
+				markableControllers
+		        .parallelStream()
+				.flatMap(controller -> controller.getRecords(attributes).stream())
+				.collect(Collectors.toList()));
+		
+		Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
+		        .withDefuzzifier(new CustomDefuzzifier(sharpValues))
+				.build()
+				.train(new DataSet(clazz, clazzValues, attributes, records));
+		
+		return c;
+	}
+
 	private Map<List<String>, TestRecord> getMapping(List<String> attributes, 
 			Map<ImageController, Map<List<String>, Set<Coordinates>>> controllersInitialMappings) {
-		Map<List<String>, TestRecord> mapping  = new HashMap<>();
-		
-		List<List<String>> uniqueValues = controllersInitialMappings.entrySet()
+		Set<List<String>> uniqueValues = controllersInitialMappings.entrySet()
 				.parallelStream()
 				.flatMap(e -> e.getValue().keySet().stream())
-				.collect(Collectors.toList());
+				.collect(Collectors.toSet());
 		
-		for (List<String> values : uniqueValues) {
-			Map<String, Double> attributeValues = new HashMap<>();
-			attributeValues.put(attributes.get(0), Double.parseDouble(values.get(0)));
-			attributeValues.put(attributes.get(1), Double.parseDouble(values.get(1)));
-			attributeValues.put(attributes.get(2), Double.parseDouble(values.get(2)));
-			mapping.put(values, new TestRecord(attributeValues));
-		}
-		
-		return mapping;
+		return Utils.getMapping(attributes, uniqueValues);
 	}
 
 	@FXML
@@ -342,7 +481,7 @@ public class Controller extends BaseController implements Initializable {
 
 	private Stage showPopup(final String info) {
 		final Stage dialog = StageUtils.initDialog(root.getScene().getWindow());
-		final HBox box = ControllerUtils.getHBoxWithLabelAndProgressIndicator(info);
+		final HBox box = Utils.getHBoxWithLabelAndProgressIndicator(info);
 		final Scene scene = new Scene(box);
 		injectStylesheets(box);
 		dialog.setScene(scene);

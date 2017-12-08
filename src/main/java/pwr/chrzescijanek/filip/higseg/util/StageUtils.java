@@ -3,6 +3,7 @@ package pwr.chrzescijanek.filip.higseg.util;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -12,8 +13,6 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import pwr.chrzescijanek.filip.higseg.controller.ImageController;
 import pwr.chrzescijanek.filip.higseg.view.FXView;
-
-import static javafx.scene.control.Alert.AlertType;
 
 /**
  * Provides utility methods for handling stages.

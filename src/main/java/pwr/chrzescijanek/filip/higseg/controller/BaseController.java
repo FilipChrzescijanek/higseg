@@ -1,5 +1,11 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
+import static pwr.chrzescijanek.filip.higseg.util.Utils.getHelpView;
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.prefs.Preferences;
+
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
@@ -12,12 +18,6 @@ import javafx.scene.web.WebView;
 import javafx.stage.Stage;
 import pwr.chrzescijanek.filip.higseg.Main;
 import pwr.chrzescijanek.filip.higseg.util.StageUtils;
-
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.prefs.Preferences;
-
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getHelpView;
 
 /**
  * Base class for controllers.

@@ -1,6 +1,8 @@
 package pwr.chrzescijanek.filip.higseg.inject;
 
-import javax.inject.Inject;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toList;
+
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -15,8 +17,7 @@ import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import static java.util.Arrays.stream;
-import static java.util.stream.Collectors.toList;
+import javax.inject.Inject;
 
 /**
  * Provides methods for class instantiation using singleton components pool.

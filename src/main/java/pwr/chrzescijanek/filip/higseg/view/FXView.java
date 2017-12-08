@@ -1,17 +1,17 @@
 package pwr.chrzescijanek.filip.higseg.view;
 
+import java.io.IOException;
+import java.net.URL;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.util.Callback;
 import pwr.chrzescijanek.filip.higseg.inject.Injector;
-
-import java.io.IOException;
-import java.net.URL;
-import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * Class that handles FXML view loading process.

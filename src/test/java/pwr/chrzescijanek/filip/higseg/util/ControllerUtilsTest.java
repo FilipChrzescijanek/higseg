@@ -10,7 +10,7 @@ import static javafx.scene.paint.Color.WHITE;
 import static javafx.scene.paint.Color.color;
 import static org.junit.Assert.assertEquals;
 
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.getWebColor;
+import static pwr.chrzescijanek.filip.higseg.util.Utils.getWebColor;
 
 public class ControllerUtilsTest {
 

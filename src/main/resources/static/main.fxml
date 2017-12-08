@@ -19,8 +19,14 @@
             <MenuItem fx:id="fileMenuExit" text="E_xit" onAction="#exit"/>
         </Menu>
         <Menu fx:id="alignMenu" text="_Actions">
-            <MenuItem fx:id="alignMenuCreateModel" text="Create _model" onAction="#createModel"
-                      accelerator="Shortcut+L"/>
+            <MenuItem fx:id="alignMenuCreateModel" text="_Create model" onAction="#createModel"
+                      accelerator="Shortcut+X"/>
+            <MenuItem fx:id="alignMenuSaveModel" text="_Save model" onAction="#saveModel"
+                      accelerator="Shortcut+D"/>
+            <MenuItem fx:id="alignMenuLoadModel" text="Load _model" onAction="#loadModel"
+                      accelerator="Shortcut+M"/>
+            <MenuItem fx:id="alignMenuUnloadModel" text="_Unload model" onAction="#unloadModel"
+                      accelerator="Shortcut+U"/>
             <MenuItem fx:id="alignMenuLoadImages" text="_Load images" onAction="#loadImages"
                       accelerator="Shortcut+L"/>
             <MenuItem fx:id="runMenuAlign" text="_Grayscale" onAction="#grayscale" accelerator="F2"/>
@@ -71,33 +77,55 @@
         <columnConstraints>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
         </columnConstraints>
         <rowConstraints>
+            <RowConstraints vgrow="NEVER" minHeight="30.0"/>
             <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
             <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
         </rowConstraints>
-        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="center">
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.columnSpan="3" alignment="center">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+                <Label fx:id="info" text=""/>
+        </VBox>
+        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="createModelButton" text="Create model" onAction="#createModel"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1" alignment="center">
+        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1" alignment="center">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="saveModelButton" text="Save model" onAction="#saveModel"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="2" alignment="center">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="loadModelButton" text="Load model" onAction="#loadModel"
+                    prefWidth="120.0" GridPane.columnIndex="1"/>
+        </VBox>
+        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="loadImagesButton" text="Load images" onAction="#loadImages"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="0" alignment="center">
+        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="grayscaleButton" text="Grayscale" onAction="#grayscale"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignRightVBox" spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1" alignment="center">
+        <VBox fx:id="alignRightVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="2" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>

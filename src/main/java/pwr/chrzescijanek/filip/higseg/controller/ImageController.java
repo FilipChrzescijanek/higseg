@@ -1,25 +1,20 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
 import static org.opencv.imgcodecs.Imgcodecs.imencode;
-import static pwr.chrzescijanek.filip.higseg.util.ControllerUtils.startTask;
+import static pwr.chrzescijanek.filip.higseg.util.Utils.startTask;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.concurrent.FutureTask;
-import java.util.logging.Logger;
 
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
 import org.opencv.imgproc.Imgproc;
@@ -62,20 +57,21 @@ import javafx.scene.transform.Transform;
 import javafx.stage.Stage;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
-import pwr.chrzescijanek.filip.higseg.util.ControllerUtils;
 import pwr.chrzescijanek.filip.higseg.util.Coordinates;
 import pwr.chrzescijanek.filip.higseg.util.Decision;
+import pwr.chrzescijanek.filip.higseg.util.Utils;
 
 /**
  * Application controller class.
  */
 public class ImageController extends BaseController implements Initializable {
-	
-	private static final Logger LOGGER = Logger.getLogger(Controller.class.getName());
 
     private final ObjectProperty<Mat> image = new SimpleObjectProperty<>();
     
     private final BooleanProperty markable = new SimpleBooleanProperty(false);
+    
+    private final List<Double> xPoints = new ArrayList<>();
+    private final List<Double> yPoints = new ArrayList<>();
 
 	@FXML GridPane root;
     @FXML MenuBar menuBar;
@@ -248,6 +244,8 @@ public class ImageController extends BaseController implements Initializable {
 	private void initializeStyle() {
 		injectStylesheets(root);
 		canvas.setOpacity(0.5);
+		canvas.getGraphicsContext2D().setStroke(Color.BLACK);
+		canvas.getGraphicsContext2D().setFill  (Color.BLACK);
 	}
 	
 	private void setImageViewControls(final ImageView imageView, final ScrollPane imageScrollPane,
@@ -264,6 +262,34 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.setOnMouseMoved(event -> mousePositionLabel.setText(
 				(((int) event.getX()) + 1) + " : " + (((int) event.getY()) + 1)));
 		canvas.setOnMouseExited(event -> mousePositionLabel.setText("- : -"));
+		canvas.setOnMouseDragged(event -> {
+			if (markable.get()) {
+				xPoints.add(event.getX());
+				yPoints.add(event.getY());
+				canvas.getGraphicsContext2D().strokePolyline(
+						xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+						yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+						xPoints.size()
+					);
+			}
+		});
+		canvas.setOnMouseReleased(event -> {
+			if (modeMark.isSelected()) {
+				canvas.getGraphicsContext2D().fillPolygon(
+							xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+							yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+							xPoints.size()
+						);
+			} else {
+				double minX = xPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+				double minY = yPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+				double maxX = xPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+				double maxY = yPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+				canvas.getGraphicsContext2D().clearRect(minX - 1.0, minY - 1.0, maxX - minX + 2.0, maxY - minY + 2.0);
+			}
+			xPoints.clear();
+			yPoints.clear();
+		});
 		imageViewGroup.setOnScroll(event -> {
 			if (event.isControlDown() && imageView.getImage() != null) {
 				final double deltaY = event.getDeltaY();
@@ -354,10 +380,6 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.scaleYProperty().bind(alignImageView.scaleYProperty());
 		canvas.translateXProperty().bind(alignImageView.translateXProperty());
 		canvas.translateYProperty().bind(alignImageView.translateYProperty());
-		if (markable.get()) {
-			canvas.getGraphicsContext2D().setFill(Color.BLACK);
-			canvas.getGraphicsContext2D().fillOval(0, 5, 36, 30);
-		}
 	}
 
     private Image createImage(final Mat image) {
@@ -367,55 +389,15 @@ public class ImageController extends BaseController implements Initializable {
     }
 
 	Map<List<String>, Set<Coordinates>> getInitialMapping() {
-        if (image.get().channels() == 3) {
-			Mat rgb = image.get();
-			Mat hsv = new Mat();
-			Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_BGR2HSV_FULL);
-			
-			final int channels     = hsv.channels();
-			final int width        = hsv.width();
-			final int noOfBytes    = (int) hsv.total() * channels;
-			final byte[] imageData = new byte[noOfBytes];
-			
-			hsv.get(0, 0, imageData);
-			
-			Map<List<String>, Set<Coordinates>> initialMapping = new HashMap<>();
-			
-			for (int i = 0; i < imageData.length; i += channels) {
-				List<String> values = Arrays.asList(
-						String.valueOf(Byte.toUnsignedInt(imageData[i + 0])),
-						String.valueOf(Byte.toUnsignedInt(imageData[i + 1])),
-						String.valueOf(Byte.toUnsignedInt(imageData[i + 2])));
-				
-				Set<Coordinates> coordinates = initialMapping.getOrDefault(values, new HashSet<>());
-				coordinates.add(new Coordinates((i / channels) % width, (i / channels) / width));
-				initialMapping.put(values, coordinates);
-			}
-			
-			return initialMapping;
-        }
-        return Collections.emptyMap();
+        return Utils.getInitialMapping(image.get());
 	}
 
 	void grayscale(Map<TestRecord, Set<Coordinates>> mapping) {
         if (image.get().channels() == 3) {
-			Mat result = createMat(mapping);
+			Mat result = Utils.createMat(image.get(), mapping);
 	        Platform.runLater(() -> image.set(result));
         }
     }
-
-    private Mat createMat(Map<TestRecord, Set<Coordinates>> mapping) {
-    	final byte[] data = new byte[(int) image.get().total()];
-		final int width  = image.get().width();
-    	mapping.forEach((k, v) -> {
-			v.forEach(p -> {
-				data[p.getY() * width + p.getX()] = k.getValue().byteValue();
-			});
-		}); 
-		final Mat result = new Mat(image.get().size(), CvType.CV_8UC1);
-		result.put(0, 0, data);
-		return result;
-	}
 
 	void threshold() {
         if (image.get().channels() == 1) {
@@ -442,7 +424,7 @@ public class ImageController extends BaseController implements Initializable {
             protected Void call() throws Exception {
                 try {
                     String title = ((Stage) root.getScene().getWindow()).getTitle();
-                    ControllerUtils.writeImage(image.get(), selectedDirectory, title);
+                    Utils.writeImage(image.get(), selectedDirectory, title);
                 } catch (final IOException e) {
                     handleException(e, "Save failed! Check your write permissions.");
                 }
