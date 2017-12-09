@@ -80,6 +80,7 @@ public class ImageController extends BaseController implements Initializable {
     @FXML Menu editMenu;
     @FXML MenuItem editMenuZoomIn;
     @FXML MenuItem editMenuZoomOut;
+    @FXML MenuItem editMenuEraseAll;
 	@FXML Menu optionsMenu;
 	@FXML Menu optionsMenuMode;
 	@FXML RadioMenuItem optionsMenuModeMark;
@@ -182,6 +183,11 @@ public class ImageController extends BaseController implements Initializable {
 	void zoomOut() {
 		updateScrollbars(alignImageView, alignScrollPane, -1);
 	}
+	
+	@FXML
+	void eraseAll() {
+		canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+	}
 
 	@Override
 	public void initialize(final URL location, final ResourceBundle resources) {
@@ -192,7 +198,6 @@ public class ImageController extends BaseController implements Initializable {
 	
 	private void addListeners() {
 		addOnMouseReleasedListeners();
-		addOnMouseClickedListeners();
 		setImageViewControls(alignImageView, alignScrollPane, alignImageViewGroup, alignScaleCombo,
 		                     alignMousePositionLabel);
 	}
@@ -215,15 +220,6 @@ public class ImageController extends BaseController implements Initializable {
 		alignScrollPane.prefWidthProperty().bind(root.widthProperty());
 	}
 
-	private void addOnMouseClickedListeners() {
-		setOnAlignImageMouseClicked();
-	}
-	
-	private void setOnAlignImageMouseClicked() {
-		alignImageViewGroup.setOnMouseClicked(event -> {
-		});
-	}
-
 	private void addOnMouseReleasedListeners() {
 		root.setOnMouseReleased(event -> {
 			alignImageViewGroup.getScene().setCursor(Cursor.DEFAULT);
@@ -244,7 +240,6 @@ public class ImageController extends BaseController implements Initializable {
 	private void initializeStyle() {
 		injectStylesheets(root);
 		canvas.setOpacity(0.5);
-		canvas.getGraphicsContext2D().setStroke(Color.BLACK);
 		canvas.getGraphicsContext2D().setFill  (Color.BLACK);
 	}
 	
@@ -262,6 +257,15 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.setOnMouseMoved(event -> mousePositionLabel.setText(
 				(((int) event.getX()) + 1) + " : " + (((int) event.getY()) + 1)));
 		canvas.setOnMouseExited(event -> mousePositionLabel.setText("- : -"));
+		canvas.setOnMousePressed(event -> {
+			if (markable.get()) {
+				if (modeMark.isSelected()) {
+					canvas.getGraphicsContext2D().setStroke(Color.BLACK);
+				} else {
+					canvas.getGraphicsContext2D().setStroke(Color.RED);
+				}
+			}
+		});
 		canvas.setOnMouseDragged(event -> {
 			if (markable.get()) {
 				xPoints.add(event.getX());
@@ -272,23 +276,27 @@ public class ImageController extends BaseController implements Initializable {
 						xPoints.size()
 					);
 			}
+			mousePositionLabel.setText(
+					(((int) event.getX()) + 1) + " : " + (((int) event.getY()) + 1));
 		});
 		canvas.setOnMouseReleased(event -> {
-			if (modeMark.isSelected()) {
-				canvas.getGraphicsContext2D().fillPolygon(
-							xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
-							yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
-							xPoints.size()
-						);
-			} else {
-				double minX = xPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
-				double minY = yPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
-				double maxX = xPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
-				double maxY = yPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
-				canvas.getGraphicsContext2D().clearRect(minX - 1.0, minY - 1.0, maxX - minX + 2.0, maxY - minY + 2.0);
+			if (markable.get()) {
+				if (modeMark.isSelected()) {
+					canvas.getGraphicsContext2D().fillPolygon(
+								xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+								yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+								xPoints.size()
+							);
+				} else {
+					double minX = xPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+					double minY = yPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
+					double maxX = xPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+					double maxY = yPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+					canvas.getGraphicsContext2D().clearRect(minX - 1.0, minY - 1.0, maxX - minX + 2.0, maxY - minY + 2.0);
+				}
+				xPoints.clear();
+				yPoints.clear();
 			}
-			xPoints.clear();
-			yPoints.clear();
 		});
 		imageViewGroup.setOnScroll(event -> {
 			if (event.isControlDown() && imageView.getImage() != null) {
@@ -361,6 +369,7 @@ public class ImageController extends BaseController implements Initializable {
 		alignBottomGrid.visibleProperty().bind(alignImageIsPresent);
 		optionsMenu.visibleProperty().bind(markable);
 		modeBox.visibleProperty().bind(markable);
+		editMenuEraseAll.visibleProperty().bind(markable);
 	}
 
 	void setMarkable(boolean markable) {
