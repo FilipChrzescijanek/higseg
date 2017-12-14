@@ -62,8 +62,12 @@ public final class Utils {
 	 * @throws IOException if image could not be written
 	 */
 	public static void writeImage(final Mat image, final File selectedDirectory, final String title) throws IOException {
-		imwrite(selectedDirectory.getCanonicalPath()
-		        + File.separator + title, image);
+		String name = title.substring(0, title.lastIndexOf('.'));
+		if (title.endsWith(")")) {
+			name += title.substring(title.lastIndexOf(" ("));
+		}
+		name += ".bmp";
+		imwrite(selectedDirectory.getCanonicalPath() + File.separator + name, image);
 	}
 
 	public static Classifier loadModel(String filePath) throws IOException {

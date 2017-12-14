@@ -289,7 +289,8 @@ public class Controller extends BaseController implements Initializable {
 		Platform.runLater(() -> {
             final Stage newStage = new Stage();
             final String viewPath = "/static/image.fxml";
-            final ImageController controller = StageUtils.loadImageStage(newStage, viewPath, markable ? fileName + " (markable)" : fileName);
+            String name = getTitle(markable, fileName);
+            final ImageController controller = StageUtils.loadImageStage(newStage, viewPath, markable ? name + " (markable)" : name);
         	controller.setMarkable(markable);
             if (!markable) {
 	            controllers.add(controller);
@@ -305,6 +306,28 @@ public class Controller extends BaseController implements Initializable {
             controller.setImage(image);
             newStage.show();
 		});
+	}
+
+	private String getTitle(final boolean markable, final String fileName) {
+		long count = 0;
+		if (!markable) {
+			count = controllers
+					.stream()
+					.map(c -> ((Stage) c.root.getScene().getWindow()).getTitle())
+					.filter(t -> t.equals(fileName))
+					.count();
+		} else {
+			count = markableControllers
+					.stream()
+					.map(c -> ((Stage) c.root.getScene().getWindow()).getTitle())
+					.filter(t -> t.equals(fileName + " (markable)"))
+					.count();
+		}
+		String name = fileName;
+		if (count > 0) {
+			name = name + " (" + (count + 1) + ")";
+		}
+		return name;
 	}
 	
 	@Override
