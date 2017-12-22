@@ -23,6 +23,7 @@ import org.opencv.imgproc.Imgproc;
 import com.bpodgursky.jbool_expressions.Expression;
 import com.bpodgursky.jbool_expressions.parsers.ExprParser;
 import com.bpodgursky.jbool_expressions.rules.RuleSet;
+import com.google.gson.Gson;
 
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
@@ -40,13 +41,14 @@ import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Stats;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
 import pwr.chrzescijanek.filip.fuzzyclassifier.model.Rule;
-import pwr.chrzescijanek.filip.fuzzyclassifier.model.SimpleClassifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.model.SimpleModel;
-import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.BasicDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.CustomDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.Defuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneRule;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoRule;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.BasicTypeOneDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.CustomTypeOneDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.SimpleTypeOneClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneModel;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.BasicTypeTwoDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.CustomTypeTwoDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.SimpleTypeTwoClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoModel;
 
 /**
  * Provides utility methods for handling controllers.
@@ -76,25 +78,31 @@ public final class Utils {
 
 	public static Classifier loadModel(File file) throws IOException {
 		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-			List<String> lines = br.lines().collect(Collectors.toList());
-			int type = Integer.parseInt(lines.get(0));
-			List<String> classValues = getClassValues(lines.get(1));
-			List<Rule> rules = getRules(lines.get(2), type);
-			Map<String, Double> means = getMeans(lines.get(3));
-			Map<String, Double> variances = getVariances(lines.get(4));
-			Defuzzifier defuzzifier = lines.size() > 5 ? 
-					new CustomDefuzzifier(getSharpValues(lines.get(5))) 
-					: new BasicDefuzzifier(classValues);
-			return new SimpleClassifier(new SimpleModel(classValues, rules, new Stats(means, variances)), defuzzifier);
+			String json = br.lines().collect(Collectors.joining());
+			ModelDto model = new Gson().fromJson(json, ModelDto.class);
+		
+			List<Rule> rules = getRules(model.getRules());
+			Map<String, Double> bottomValues = model.getBottomValues();
+			Map<String, Double> topValues    = model.getTopValues();
+			
+			return model.getType() == 1 ? new SimpleTypeOneClassifier(new TypeOneModel(
+					rules,
+					model.getClazzValues(),  
+					new Stats(model.getMeans(), model.getVariances())), 
+					bottomValues != null ? 
+							new CustomTypeOneDefuzzifier(bottomValues) 
+							: new BasicTypeOneDefuzzifier(model.getClazzValues()))
+					: new SimpleTypeTwoClassifier(new TypeTwoModel(
+							rules, 
+							model.getClazzValues(), 
+							new Stats(model.getMeans(), model.getVariances())), 
+							bottomValues != null ? 
+									new CustomTypeTwoDefuzzifier(bottomValues, topValues) 
+									: new BasicTypeTwoDefuzzifier(model.getClazzValues()));
 		}
 	}
 
-	private static List<String> getClassValues(String string) {
-		String[] inputs = string.replace("[", "").replaceAll("]", "").trim().split("\\s*,\\s*");
-		return Arrays.asList(inputs);
-	}
-
-	private static List<Rule> getRules(String string, int type) {
+	private static List<Rule> getRules(String string) {
 		String[] inputs = string.replace("[", "").replaceAll("]", "").trim().split("\\s*,\\s*");
 		List<Rule> rules = new ArrayList<>();
 		for (String input : inputs) {
@@ -102,34 +110,10 @@ public final class Utils {
 			String clazz = parts[0];
 			String expression = parts[1];
 			Expression<String> expr = RuleSet.simplify(ExprParser.parse(expression));
-			rules.add(type == 1 ? new TypeOneRule(clazz, expr) : new TypeTwoRule(clazz, expr));
+			rules.add(new Rule(expr, clazz));
 		}
 		return rules;
 	}
-
-	private static Map<String, Double> getMeans(String string) {
-		return parseMap(string);
-	}
-
-	private static Map<String, Double> getVariances(String string) {
-		return parseMap(string);
-	}
-	
-    private static Map<String, Double> getSharpValues(String string) {
-		return parseMap(string);
-	}
-    
-    private static Map<String, Double> parseMap(String string) {
-    	Map<String, Double> map = new HashMap<>();
-		String[] inputs = string.replace("{", "").replace("}", "").trim().split("\\s*,\\s*");
-		for (String input : inputs) {
-			String[] parts = input.split("\\s*=\\s*");
-			String attribute = parts[0];
-			Double value = Double.parseDouble(parts[1]);
-			map.put(attribute, value);
-		}
-		return map;
-    }
 
 	public static Mat createMat(Mat image, Map<TestRecord, Set<Coordinates>> mapping) {
     	final byte[] data = new byte[(int) image.total()];

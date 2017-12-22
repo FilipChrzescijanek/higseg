@@ -1,6 +1,0 @@
-1
-[YES, NO]
-[NO = ((Hue_HIGH & Saturation_MEDIUM & Value_HIGH) | (Hue_HIGH & Saturation_MEDIUM & Value_LOW) | (Hue_HIGH & Saturation_MEDIUM & Value_MEDIUM) | (Hue_MEDIUM & Saturation_MEDIUM & Value_HIGH) | (Hue_MEDIUM & Saturation_MEDIUM & Value_LOW) | (Hue_MEDIUM & Saturation_MEDIUM & Value_MEDIUM)), YES = ((Hue_MEDIUM & Saturation_HIGH & Value_LOW) | (Hue_MEDIUM & Saturation_HIGH & Value_MEDIUM))]
-{Saturation=37.349591836734696, Value=171.5569387755102, Hue=61.77612244897959}
-{Saturation=2392.127403385123, Value=1288.9877758892403, Hue=6856.146847586467}
-{NO=255.0, YES=0.0}

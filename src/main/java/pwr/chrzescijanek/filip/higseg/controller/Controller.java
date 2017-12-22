@@ -25,6 +25,8 @@ import org.opencv.core.CvException;
 import org.opencv.core.Mat;
 import org.opencv.imgcodecs.Imgcodecs;
 
+import com.google.gson.Gson;
+
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
@@ -56,14 +58,17 @@ import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestDataSet;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
 import pwr.chrzescijanek.filip.fuzzyclassifier.model.AbstractModel;
-import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.CustomDefuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.Defuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.AttributeReductor;
 import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.ConflictResolver;
+import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.Fuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.CustomTypeOneDefuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneClassifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneFuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.CustomTypeTwoDefuzzifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoClassifier;
 import pwr.chrzescijanek.filip.higseg.util.Coordinates;
 import pwr.chrzescijanek.filip.higseg.util.Decision;
+import pwr.chrzescijanek.filip.higseg.util.ModelDto;
 import pwr.chrzescijanek.filip.higseg.util.StageUtils;
 import pwr.chrzescijanek.filip.higseg.util.Utils;
 
@@ -185,24 +190,27 @@ public class Controller extends BaseController implements Initializable {
 
 	private void saveModel(final File file) throws IOException {
 		List<String> attributes  = Arrays.asList("Hue", "Saturation", "Value");
-		AbstractClassifier classifier = (AbstractClassifier) buildClassifier(attributes);
+		AbstractClassifier<?> classifier = (AbstractClassifier<?>) buildClassifier(attributes);
 		
 		try (BufferedWriter bw = new BufferedWriter(new FileWriter(file))) {
-			AbstractModel model = (AbstractModel) classifier.getModel();
-			bw.write(classifier instanceof TypeOneClassifier ? "1" : "2");
-			bw.newLine();
-			bw.write(model.getClazzValues().toString());
-			bw.newLine();
-			bw.write(model.getRules().toString());
-			bw.newLine();
-			bw.write(model.getStats().getMeans().toString());
-			bw.newLine();
-			bw.write(model.getStats().getVariances().toString());
-			Defuzzifier defuzzifier = classifier.getDefuzzifier();
-			if (defuzzifier instanceof CustomDefuzzifier) {
-				bw.newLine();
-				bw.write(((CustomDefuzzifier) defuzzifier).getSharpValues().toString());
+			AbstractModel<?> model = (AbstractModel<?>) classifier.getModel();
+			Defuzzifier<?> defuzzifier = classifier.getDefuzzifier();
+			Map<String, Double> bottomValues = null;
+			Map<String, Double> topValues = null;
+			if (defuzzifier instanceof CustomTypeOneDefuzzifier) {
+				bottomValues = ((CustomTypeOneDefuzzifier) defuzzifier).getSharpValues();
+				topValues    = ((CustomTypeOneDefuzzifier) defuzzifier).getSharpValues();
+			} else if (defuzzifier instanceof CustomTypeTwoDefuzzifier) {
+				bottomValues = ((CustomTypeTwoDefuzzifier) defuzzifier).getBottomValues();
+				topValues    = ((CustomTypeTwoDefuzzifier) defuzzifier).getTopValues();
 			}
+			
+			bw.write(new Gson().toJson(new ModelDto(
+					classifier instanceof TypeOneClassifier ? 1 : 2, 
+					model.getClazzValues(), 
+					model.getRules().toString(), 
+					model.getStats().getMeans(), 
+					model.getStats().getVariances(), bottomValues, topValues)));
 		}
 	}
 	
@@ -309,20 +317,11 @@ public class Controller extends BaseController implements Initializable {
 	}
 
 	private String getTitle(final boolean markable, final String fileName) {
-		long count = 0;
-		if (!markable) {
-			count = controllers
-					.stream()
-					.map(c -> ((Stage) c.root.getScene().getWindow()).getTitle())
-					.filter(t -> t.equals(fileName))
-					.count();
-		} else {
-			count = markableControllers
-					.stream()
-					.map(c -> ((Stage) c.root.getScene().getWindow()).getTitle())
-					.filter(t -> t.equals(fileName + " (markable)"))
-					.count();
-		}
+		long count = (markable ? markableControllers : controllers)
+				.stream()
+				.map(c -> ((Stage) c.root.getScene().getWindow()).getTitle())
+				.filter(t -> t.startsWith(fileName))
+				.count();
 		String name = fileName;
 		if (count > 0) {
 			name = name + " (" + (count + 1) + ")";
@@ -426,25 +425,25 @@ public class Controller extends BaseController implements Initializable {
         	c = classifier.get();
         } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainDab.isSelected()) {	//@TODO
         	try {
-				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+				c = Utils.loadModel(getClass().getResource("/default-ii-dab.hgmodel").getFile());
 			} catch (IOException e) {
 				handleException(e, "Loading default type two DAB model failed!");
 			}
         } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainH.isSelected()) {
         	try {
-				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+				c = Utils.loadModel(getClass().getResource("/default-ii-h.hgmodel").getFile());
 			} catch (IOException e) {
 				handleException(e, "Loading default type two H model failed!");
 			}
         } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainDab.isSelected()) {
         	try {
-				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+				c = Utils.loadModel(getClass().getResource("/default-i-dab.hgmodel").getFile());
 			} catch (IOException e) {
 				handleException(e, "Loading default type one DAB model failed!");
 			}
         } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainH.isSelected()) {
         	try {
-				c = Utils.loadModel(getClass().getResource("/default.hgmodel").getFile());
+				c = Utils.loadModel(getClass().getResource("/default-i-h.hgmodel").getFile());
 			} catch (IOException e) {
 				handleException(e, "Loading default type one H model failed!");
 			}
@@ -457,18 +456,43 @@ public class Controller extends BaseController implements Initializable {
         String clazz = "stain";
         List<String> clazzValues = Arrays.asList(Decision.YES.toString(), Decision.NO.toString());
         
-        Map<String, Double> sharpValues = new HashMap<>();
-        sharpValues.put(Decision.YES.toString(),   0.0);
-        sharpValues.put(Decision.NO.toString(),  255.0);
-        
 		List<Record> records = Collections.unmodifiableList(
 				markableControllers
 		        .parallelStream()
 				.flatMap(controller -> controller.getRecords(attributes).stream())
 				.collect(Collectors.toList()));
+        
+		if (optionsMenuModelTypeOne.isSelected())
+	        return buildTypeOneClassifier(attributes, clazz, clazzValues, records);
+	    else 
+	        return buildTypeTwoClassifier(attributes, clazz, clazzValues, records);
+	}
+
+	private Classifier buildTypeOneClassifier(List<String> attributes, String clazz, List<String> clazzValues,
+			List<Record> records) {
+		Map<String, Double> sharpValues = new HashMap<>();
+		sharpValues.put(Decision.YES.toString(),   0.0);
+		sharpValues.put(Decision.NO.toString(),  255.0);
 		
-		Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
-		        .withDefuzzifier(new CustomDefuzzifier(sharpValues))
+		Classifier c = new TypeOneClassifier.Builder(new Fuzzifier(), new ConflictResolver(), new AttributeReductor())
+		        .withDefuzzifier(new CustomTypeOneDefuzzifier(sharpValues))
+				.build()
+				.train(new DataSet(clazz, clazzValues, attributes, records));
+		
+		return c;
+	}
+
+	private Classifier buildTypeTwoClassifier(List<String> attributes, String clazz, List<String> clazzValues,
+			List<Record> records) {
+		Map<String, Double> bottomSharpValues = new HashMap<>();
+		bottomSharpValues.put(Decision.YES.toString(),   0.0);
+		bottomSharpValues.put(Decision.NO.toString(),  240.0);
+		Map<String, Double> topSharpValues = new HashMap<>();
+		topSharpValues.put(Decision.YES.toString(),   15.0);
+		topSharpValues.put(Decision.NO.toString(),   255.0);
+		
+		Classifier c = new TypeTwoClassifier.Builder(new Fuzzifier(), new ConflictResolver(), new AttributeReductor())
+		        .withDefuzzifier(new CustomTypeTwoDefuzzifier(bottomSharpValues, topSharpValues))
 				.build()
 				.train(new DataSet(clazz, clazzValues, attributes, records));
 		

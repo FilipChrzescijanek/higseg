@@ -85,6 +85,7 @@ public class Injector {
 	 * @return instance of given class
 	 */
 	public static <T> T instantiate(final Class<T> clazz) {
+		@SuppressWarnings("unchecked")
 		final
 		T instance = injectFields((T) SUPPLIER.apply(clazz));
 		return instance;
@@ -97,6 +98,7 @@ public class Injector {
 	 * @param <T>   type
 	 * @return instance of given class
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T> T instantiateComponent(final Class<T> clazz) {
 		T product = (T) COMPONENTS.get(clazz);
 		if (product == null) {
