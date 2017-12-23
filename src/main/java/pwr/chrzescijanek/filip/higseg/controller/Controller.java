@@ -61,11 +61,12 @@ import pwr.chrzescijanek.filip.fuzzyclassifier.model.AbstractModel;
 import pwr.chrzescijanek.filip.fuzzyclassifier.postprocessor.Defuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.AttributeReductor;
 import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.ConflictResolver;
-import pwr.chrzescijanek.filip.fuzzyclassifier.preprocessor.Fuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.CustomTypeOneDefuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneFuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.CustomTypeTwoDefuzzifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoClassifier;
+import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoFuzzifier;
 import pwr.chrzescijanek.filip.higseg.util.Coordinates;
 import pwr.chrzescijanek.filip.higseg.util.Decision;
 import pwr.chrzescijanek.filip.higseg.util.ModelDto;
@@ -474,7 +475,7 @@ public class Controller extends BaseController implements Initializable {
 		sharpValues.put(Decision.YES.toString(),   0.0);
 		sharpValues.put(Decision.NO.toString(),  255.0);
 		
-		Classifier c = new TypeOneClassifier.Builder(new Fuzzifier(), new ConflictResolver(), new AttributeReductor())
+		Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
 		        .withDefuzzifier(new CustomTypeOneDefuzzifier(sharpValues))
 				.build()
 				.train(new DataSet(clazz, clazzValues, attributes, records));
@@ -491,7 +492,7 @@ public class Controller extends BaseController implements Initializable {
 		topSharpValues.put(Decision.YES.toString(),   15.0);
 		topSharpValues.put(Decision.NO.toString(),   255.0);
 		
-		Classifier c = new TypeTwoClassifier.Builder(new Fuzzifier(), new ConflictResolver(), new AttributeReductor())
+		Classifier c = new TypeTwoClassifier.Builder(new TypeTwoFuzzifier(), new ConflictResolver(), new AttributeReductor())
 		        .withDefuzzifier(new CustomTypeTwoDefuzzifier(bottomSharpValues, topSharpValues))
 				.build()
 				.train(new DataSet(clazz, clazzValues, attributes, records));
