@@ -68,7 +68,7 @@ public final class Utils {
 		if (title.endsWith(")")) {
 			name += title.substring(title.lastIndexOf(" ("));
 		}
-		name += ".bmp";
+		name += ".png";
 		imwrite(selectedDirectory.getCanonicalPath() + File.separator + name, image);
 	}
 
