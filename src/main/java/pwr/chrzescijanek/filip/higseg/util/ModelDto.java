@@ -12,9 +12,10 @@ public class ModelDto {
 	private final Map<String, Double> variances;
 	private final Map<String, Double> bottomValues;
 	private final Map<String, Double> topValues;
+	private final String morphOps;
 	
 	public ModelDto(Integer type, List<String> clazzValues, String rules, Map<String, Double> means,
-			Map<String, Double> variances, Map<String, Double> bottomValues, Map<String, Double> topValues) {
+			Map<String, Double> variances, Map<String, Double> bottomValues, Map<String, Double> topValues, String morphOps) {
 		this.type = type;
 		this.clazzValues = clazzValues;
 		this.rules = rules;
@@ -22,6 +23,7 @@ public class ModelDto {
 		this.variances = variances;
 		this.bottomValues = bottomValues;
 		this.topValues = topValues;
+		this.morphOps = morphOps;
 	}
 
 	public Integer getType() {
@@ -50,6 +52,10 @@ public class ModelDto {
 
 	public Map<String, Double> getTopValues() {
 		return topValues;
+	}
+
+	public String getMorphOps() {
+		return morphOps;
 	}
 	
 }

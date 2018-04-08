@@ -1,12 +1,6 @@
 package pwr.chrzescijanek.filip.higseg.util;
 
-import static org.opencv.imgcodecs.Imgcodecs.imwrite;
-
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,16 +8,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
-
-import com.bpodgursky.jbool_expressions.Expression;
-import com.bpodgursky.jbool_expressions.parsers.ExprParser;
-import com.bpodgursky.jbool_expressions.rules.RuleSet;
-import com.google.gson.Gson;
 
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
@@ -33,22 +21,10 @@ import javafx.scene.control.ProgressIndicator;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.web.WebView;
-import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 import javafx.stage.Window;
-import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Stats;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
-import pwr.chrzescijanek.filip.fuzzyclassifier.model.Rule;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.BasicTypeOneDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.CustomTypeOneDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.SimpleTypeOneClassifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.one.TypeOneModel;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.BasicTypeTwoDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.CustomTypeTwoDefuzzifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.SimpleTypeTwoClassifier;
-import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoModel;
 
 /**
  * Provides utility methods for handling controllers.
@@ -56,64 +32,6 @@ import pwr.chrzescijanek.filip.fuzzyclassifier.type.two.TypeTwoModel;
 public final class Utils {
 
 	private Utils() {}
-
-	/**
-	 * Writes image of sample to given directory.
-	 *
-	 * @param selectedDirectory directory
-	 * @throws IOException if image could not be written
-	 */
-	public static void writeImage(final Mat image, final File selectedDirectory, final String title) throws IOException {
-		String name = title.substring(0, title.lastIndexOf('.'));
-		if (title.endsWith(")")) {
-			name += title.substring(title.lastIndexOf(" ("));
-		}
-		name += ".png";
-		imwrite(selectedDirectory.getCanonicalPath() + File.separator + name, image);
-	}
-
-	public static Classifier loadModel(String filePath) throws IOException {
-		return loadModel(new File(filePath));
-	}
-
-	public static Classifier loadModel(File file) throws IOException {
-		try (BufferedReader br = new BufferedReader(new FileReader(file))) {
-			String json = br.lines().collect(Collectors.joining());
-			ModelDto model = new Gson().fromJson(json, ModelDto.class);
-		
-			List<Rule> rules = getRules(model.getRules());
-			Map<String, Double> bottomValues = model.getBottomValues();
-			Map<String, Double> topValues    = model.getTopValues();
-			
-			return model.getType() == 1 ? new SimpleTypeOneClassifier(new TypeOneModel(
-					rules,
-					model.getClazzValues(),  
-					new Stats(model.getMeans(), model.getVariances())), 
-					bottomValues != null ? 
-							new CustomTypeOneDefuzzifier(bottomValues) 
-							: new BasicTypeOneDefuzzifier(model.getClazzValues()))
-					: new SimpleTypeTwoClassifier(new TypeTwoModel(
-							rules, 
-							model.getClazzValues(), 
-							new Stats(model.getMeans(), model.getVariances())), 
-							bottomValues != null ? 
-									new CustomTypeTwoDefuzzifier(bottomValues, topValues) 
-									: new BasicTypeTwoDefuzzifier(model.getClazzValues()));
-		}
-	}
-
-	private static List<Rule> getRules(String string) {
-		String[] inputs = string.replace("[", "").replaceAll("]", "").trim().split("\\s*,\\s*");
-		List<Rule> rules = new ArrayList<>();
-		for (String input : inputs) {
-			String[] parts = input.split("\\s*=\\s*");
-			String clazz = parts[0];
-			String expression = parts[1];
-			Expression<String> expr = RuleSet.simplify(ExprParser.parse(expression));
-			rules.add(new Rule(expr, clazz));
-		}
-		return rules;
-	}
 
 	public static Mat createMat(Mat image, Map<TestRecord, Set<Coordinates>> mapping) {
     	final byte[] data = new byte[(int) image.total()];
@@ -174,19 +92,6 @@ public final class Utils {
 	}
 
 	/**
-	 * Shows file chooser dialog and gets CSV file.
-	 *
-	 * @param window application window
-	 * @return CSV file
-	 */
-	public static File getCSVFile(final Window window) {
-		final FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Export results to CSV file");
-		fileChooser.getExtensionFilters().add(new ExtensionFilter("Comma-separated values", "*.csv"));
-		return fileChooser.showSaveDialog(window);
-	}
-
-	/**
 	 * Shows file chooser dialog and gets image files.
 	 *
 	 * @param window application window
@@ -199,42 +104,11 @@ public final class Utils {
 		return fileChooser.showOpenMultipleDialog(window);
 	}
 
-	/**
-	 * Shows file chooser dialog and gets image files.
-	 *
-	 * @param window application window
-	 * @return image files
-	 */
-	public static File getModelFile(final Window window) {
-		final FileChooser fileChooser = new FileChooser();
-		fileChooser.setTitle("Load model");
-		fileChooser.getExtensionFilters().add(new ExtensionFilter("Model Files", "*.hgmodel"));
-		return fileChooser.showOpenDialog(window);
-	}
-
-	/**
-	 * Shows file chooser dialog and gets image files.
-	 *
-	 * @param window application window
-	 * @return image files
-	 */
 	public static File saveModelFile(final Window window) {
 		final FileChooser fileChooser = new FileChooser();
 		fileChooser.setTitle("Save model");
 		fileChooser.getExtensionFilters().add(new ExtensionFilter("Model Files", "*.hgmodel"));
 		return fileChooser.showSaveDialog(window);
-	}
-
-	/**
-	 * Shows directory chooser dialog and gets directory.
-	 *
-	 * @param window application window
-	 * @return directory
-	 */
-	public static File getDirectory(final Window window) {
-		final DirectoryChooser chooser = new DirectoryChooser();
-		chooser.setTitle("Choose directory");
-		return chooser.showDialog(window);
 	}
 
 	/**

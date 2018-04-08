@@ -1,6 +1,5 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
-import static pwr.chrzescijanek.filip.higseg.util.Utils.getDirectory;
 import static pwr.chrzescijanek.filip.higseg.util.Utils.getImageFiles;
 import static pwr.chrzescijanek.filip.higseg.util.Utils.startTask;
 
@@ -15,7 +14,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.Set;
 import java.util.function.Function;
@@ -30,8 +28,6 @@ import com.google.gson.Gson;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
-import javafx.beans.property.ObjectProperty;
-import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
@@ -41,7 +37,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.DialogPane;
-import javafx.scene.control.Label;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
@@ -78,31 +73,23 @@ import pwr.chrzescijanek.filip.higseg.util.Utils;
  */
 public class Controller extends BaseController implements Initializable {
 	
-	private static final String DEFAULT_INFO = "Default models loaded.";
-	
 	private final ObservableList<ImageController> controllers         = FXCollections.observableArrayList();
 	private final ObservableList<ImageController> markableControllers = FXCollections.observableArrayList();
-	
-	private final ObjectProperty<Classifier> classifier = new SimpleObjectProperty<>();
+
+	private StringBuilder morphOperations = new StringBuilder();
 
 	@FXML GridPane root;
 	@FXML MenuBar menuBar;
 	@FXML Menu fileMenu;
-	@FXML MenuItem fileMenuExportToPng;
 	@FXML MenuItem fileMenuExit;
 	@FXML Menu alignMenu;
 	@FXML MenuItem alignMenuLoadImages;
 	@FXML MenuItem alignMenuCreateModel;
 	@FXML MenuItem alignMenuSaveModel;
-	@FXML MenuItem alignMenuLoadModel;
-	@FXML MenuItem alignMenuUnloadModel;
 	@FXML MenuItem runMenuAlign;
-	@FXML MenuItem runMenuCalculateResults;
+	@FXML MenuItem runMenuErode;
+	@FXML MenuItem runMenuDilate;
 	@FXML Menu optionsMenu;
-	@FXML Menu optionsMenuStain;
-	@FXML RadioMenuItem optionsMenuStainDab;
-	@FXML ToggleGroup stainToggleGroup;
-	@FXML RadioMenuItem optionsMenuStainH;
 	@FXML Menu optionsMenuModel;
 	@FXML RadioMenuItem optionsMenuModelTypeOne;
 	@FXML ToggleGroup modelToggleGroup;
@@ -115,16 +102,14 @@ public class Controller extends BaseController implements Initializable {
 	@FXML MenuItem helpMenuHelp;
 	@FXML MenuItem helpMenuAbout;
 	@FXML GridPane alignMainPane;
-	@FXML Button loadModelButton;
-	@FXML Button saveModelButton;
 	@FXML Button createModelButton;
 	@FXML VBox alignLeftVBox;
 	@FXML Button loadImagesButton;
 	@FXML VBox alignCenterVBox;
-	@FXML Button grayscaleButton;
+	@FXML Button processButton;
+	@FXML Button erodeButton;
 	@FXML VBox alignRightVBox;
-	@FXML Button thresholdButton;
-	@FXML Label info;
+	@FXML Button dilateButton;
 
 	@FXML
 	void about() {
@@ -145,16 +130,6 @@ public class Controller extends BaseController implements Initializable {
 	}
 	
 	@FXML
-	void setDiaminobenzidine() {
-		stainToggleGroup.selectToggle(optionsMenuStainDab);
-	}
-	
-	@FXML
-	void setHaematoxylin() {
-		stainToggleGroup.selectToggle(optionsMenuStainH);
-	}
-	
-	@FXML
 	void setTypeOne() {
 		modelToggleGroup.selectToggle(optionsMenuModelTypeOne);
 	}
@@ -166,7 +141,7 @@ public class Controller extends BaseController implements Initializable {
 	
 	@FXML
 	void exit() {
-		root.getScene().getWindow().hide();
+		Platform.exit();
 	}
 	
 	@FXML
@@ -182,7 +157,9 @@ public class Controller extends BaseController implements Initializable {
 					} catch (IOException e) {
 						handleException(e, "Saving failed!\nPlease check your write permissions.");
 					}
-					Platform.runLater(() -> dialog.close());
+					Platform.runLater(() -> {
+						dialog.close();
+					});
 					return null;
 				}
 			});
@@ -211,41 +188,15 @@ public class Controller extends BaseController implements Initializable {
 					model.getClazzValues(), 
 					model.getRules().toString(), 
 					model.getStats().getMeans(), 
-					model.getStats().getVariances(), bottomValues, topValues)));
-		}
-	}
-	
-	@FXML
-	void unloadModel() {
-		classifier.set(null);
-		info.setText(DEFAULT_INFO);
-	}
-	
-	@FXML
-	void loadModel() {
-		final File file = Utils.getModelFile(root.getScene().getWindow());
-		if (file != null) {
-			final Stage dialog = showPopup("Loading model...");
-			startTask(new Task<Void>() {
-				@Override
-				protected Void call() throws Exception {
-					try {
-						classifier.set(Utils.loadModel(file));
-						Platform.runLater(() -> info.setText("Currently loaded model: " + file.getName()));
-					} catch (IOException e) {
-						handleException(e, "Loading failed!\nPlease check file path and your read permissions.");
-					}
-					Platform.runLater(() -> dialog.close());
-					return null;
-				}
-			});
+					model.getStats().getVariances(), bottomValues, topValues, morphOperations.toString())));
 		}
 	}
 	
 	@FXML
 	void createModel() {
 		final List<File> selectedFiles = getImageFiles(root.getScene().getWindow());
-		if (selectedFiles != null) {
+		if (selectedFiles != null && !selectedFiles.isEmpty()) {
+			morphOperations = new StringBuilder();
 			final Task<? extends Void> task = createLoadImagesTask(selectedFiles, true);
 			startTask(task);
 		}
@@ -254,7 +205,7 @@ public class Controller extends BaseController implements Initializable {
 	@FXML
 	void loadImages() {
 		final List<File> selectedFiles = getImageFiles(root.getScene().getWindow());
-		if (selectedFiles != null) {
+		if (selectedFiles != null && !selectedFiles.isEmpty()) {
 			final Task<? extends Void> task = createLoadImagesTask(selectedFiles, false);
 			startTask(task);
 		}
@@ -272,16 +223,15 @@ public class Controller extends BaseController implements Initializable {
 	
 	private void loadImages(final List<File> selectedFiles, final boolean markable) {
 		for (final File f : selectedFiles) {
-			final String filePath;
+			String filePath = "";
 			try {
 				filePath = f.getCanonicalPath();
 				final Mat image = getImage(filePath);
 				addNewImage(filePath, image, markable);
 			} catch (IOException | CvException e) {
 				handleException(e,
-				                "Loading failed!\nImages might be corrupted, paths may contain non-ASCII symbols or "
+				                "Loading failed!\nImage " + filePath + " might be corrupted, paths may contain non-ASCII symbols or "
 				                + "you do not have sufficient read permissions.");
-				break;
 			}
 		}
 	}
@@ -331,22 +281,18 @@ public class Controller extends BaseController implements Initializable {
 	}
 	
 	@Override
-	public void initialize(final URL location, final ResourceBundle resources) {
-		
+	public void initialize(final URL location, final ResourceBundle resources) {	
 		initializeComponents(location, resources);
 		setBindings();
 	}
 	
 	private void setBindings() {
 		setEnablementBindings();
-		info.visibleProperty().bind(Bindings.isEmpty(markableControllers));
 	}
 	
 	private void initializeComponents(final URL location, final ResourceBundle resources) {
 		initializeStyle();
-		setDiaminobenzidine();
 		setTypeTwo();
-		info.setText(DEFAULT_INFO);
 	}
 	
 	private void initializeStyle() {
@@ -361,38 +307,68 @@ public class Controller extends BaseController implements Initializable {
 	
 	private void setEnablementBindings() {
 		final BooleanBinding noImages    = Bindings.isEmpty(controllers);
-		final BooleanBinding creating = Bindings.isNotEmpty(markableControllers);
-		final BooleanBinding modelLoaded = Bindings.isNotNull(classifier);
-		final BooleanBinding cannotSave  = Bindings.not(creating);
+		final BooleanBinding notCreating = Bindings.isEmpty(markableControllers);
 
-		fileMenuExportToPng    .disableProperty().bind(noImages);
-		runMenuAlign           .disableProperty().bind(noImages);
-		runMenuCalculateResults.disableProperty().bind(noImages);
-		grayscaleButton        .disableProperty().bind(noImages);
-		thresholdButton        .disableProperty().bind(noImages);
-		thresholdButton        .disableProperty().bind(noImages);
-		loadModelButton        .disableProperty().bind(creating);
-		alignMenuUnloadModel   .disableProperty().bind(Bindings.not(modelLoaded));
-		alignMenuLoadModel     .disableProperty().bind(creating);
-		saveModelButton        .disableProperty().bind(cannotSave);
-		alignMenuSaveModel     .disableProperty().bind(cannotSave);
-		optionsMenuStain       .disableProperty().bind(Bindings.or(creating, modelLoaded));
-		optionsMenuModel       .disableProperty().bind(Bindings.and(Bindings.not(creating), modelLoaded));
+		runMenuAlign           .disableProperty().bind(Bindings.or(noImages, notCreating));
+		processButton          .disableProperty().bind(Bindings.or(noImages, notCreating));
+		erodeButton	           .disableProperty().bind(Bindings.or(noImages, notCreating));
+		dilateButton 	       .disableProperty().bind(Bindings.or(noImages, notCreating));
+		runMenuErode           .disableProperty().bind(Bindings.or(noImages, notCreating));
+		runMenuDilate 	       .disableProperty().bind(Bindings.or(noImages, notCreating));
+		loadImagesButton       .disableProperty().bind(Bindings.not(noImages));
+		alignMenuSaveModel     .disableProperty().bind(notCreating);
+		optionsMenuModel       .disableProperty().bind(notCreating);
 	}
 	
 	@FXML
-	void grayscale() {
-		final Stage dialog = showPopup("Converting to grayscale...");
+	void process() {
+		final Stage dialog = showPopup("Processing...");
 		startTask(new Task<Void>() {
 			@Override
 			protected Void call() throws Exception {
-				grayscale(dialog);
+				process(dialog);
 				return null;
 			}
 		});
 	}
 	
-	private void grayscale(final Stage dialog) {
+	@FXML
+	void erode() {
+		final Stage dialog = showPopup("Eroding...");
+		startTask(new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				erode(dialog);
+				return null;
+			}
+		});
+	}
+	
+	@FXML
+	void dilate() {
+		final Stage dialog = showPopup("Dillating...");
+		startTask(new Task<Void>() {
+			@Override
+			protected Void call() throws Exception {
+				dilate(dialog);
+				return null;
+			}
+		});
+	}
+
+	private void erode(final Stage dialog) {
+		morphOperations.append("e");
+        controllers.forEach(ImageController::erode);
+        Platform.runLater(() -> dialog.close());
+	}
+
+	private void dilate(final Stage dialog) {
+		morphOperations.append("d");
+        controllers.forEach(ImageController::dilate);
+        Platform.runLater(() -> dialog.close());
+	}
+	
+	private void process(final Stage dialog) {
         List<String> attributes  = Arrays.asList("Hue", "Saturation", "Value");
         Classifier c = chooseClassifier(attributes);
         
@@ -408,9 +384,9 @@ public class Controller extends BaseController implements Initializable {
 	    	c.test(new TestDataSet(attributes, uniqueTestRecords));
 	        
 	        controllersInitialMappings.forEach((controller, initialMapping) -> {
-	        	controller.grayscale(initialMapping.entrySet()
+	        	controller.process(initialMapping.entrySet()
 	        			.parallelStream()
-	        			.collect(Collectors.toMap(e -> mapping.get(e.getKey()), e -> e.getValue())));
+	        			.collect(Collectors.toMap(e -> mapping.get(e.getKey()), e -> e.getValue())), morphOperations.toString());
 	        });
         }
         
@@ -418,39 +394,8 @@ public class Controller extends BaseController implements Initializable {
 	}
 
 	private Classifier chooseClassifier(List<String> attributes) {
-		Classifier c = null;
-		
-        if (!markableControllers.isEmpty()) {
-	        c = buildClassifier(attributes);
-        } else if (!Objects.isNull(classifier.get())) {
-        	c = classifier.get();
-        } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainDab.isSelected()) {	//@TODO
-        	try {
-				c = Utils.loadModel(getClass().getResource("/default-ii-dab.hgmodel").getFile());
-			} catch (IOException e) {
-				handleException(e, "Loading default type two DAB model failed!");
-			}
-        } else if (optionsMenuModelTypeTwo.isSelected() && optionsMenuStainH.isSelected()) {
-        	try {
-				c = Utils.loadModel(getClass().getResource("/default-ii-h.hgmodel").getFile());
-			} catch (IOException e) {
-				handleException(e, "Loading default type two H model failed!");
-			}
-        } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainDab.isSelected()) {
-        	try {
-				c = Utils.loadModel(getClass().getResource("/default-i-dab.hgmodel").getFile());
-			} catch (IOException e) {
-				handleException(e, "Loading default type one DAB model failed!");
-			}
-        } else if (optionsMenuModelTypeOne.isSelected() && optionsMenuStainH.isSelected()) {
-        	try {
-				c = Utils.loadModel(getClass().getResource("/default-i-h.hgmodel").getFile());
-			} catch (IOException e) {
-				handleException(e, "Loading default type one H model failed!");
-			}
-        }
-        
-		return c;
+		Classifier c = buildClassifier(attributes);
+        return c;
 	}
 
 	private Classifier buildClassifier(List<String> attributes) {  
@@ -510,23 +455,6 @@ public class Controller extends BaseController implements Initializable {
 		return Utils.getMapping(attributes, uniqueValues);
 	}
 
-	@FXML
-	void threshold() {
-		final Stage dialog = showPopup("Thresholding...");
-		startTask(new Task<Void>() {
-			@Override
-			protected Void call() throws Exception {
-				threshold(dialog);
-				return null;
-			}
-		});
-	}
-	
-	private void threshold(final Stage dialog) {
-        controllers.forEach(ImageController::threshold);
-        Platform.runLater(() -> dialog.close());
-	}
-
 	private Stage showPopup(final String info) {
 		final Stage dialog = StageUtils.initDialog(root.getScene().getWindow());
 		final HBox box = Utils.getHBoxWithLabelAndProgressIndicator(info);
@@ -536,18 +464,5 @@ public class Controller extends BaseController implements Initializable {
 		dialog.show();
 		return dialog;
 	}
-
-	@FXML
-    void exportToPng() {
-        final File selectedDirectory = getDirectory(root.getScene().getWindow());
-        final Task<? extends Void> task = new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                controllers.forEach(controller -> controller.writeImage(selectedDirectory));
-                return null;
-            }
-        };
-        startTask(task);
-    }
 
 }

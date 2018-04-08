@@ -8,43 +8,27 @@
     <rowConstraints>
         <RowConstraints vgrow="NEVER" />
         <RowConstraints vgrow="ALWAYS" />
+        <RowConstraints vgrow="ALWAYS" />
     </rowConstraints>
     <columnConstraints>
         <ColumnConstraints hgrow="ALWAYS"/>
     </columnConstraints>
     <MenuBar fx:id="menuBar" GridPane.rowIndex="0">
         <Menu fx:id="fileMenu" text="_File">
-            <MenuItem fx:id="fileMenuExportToPng" text="_Save samples" onAction="#exportToPng"
+            <MenuItem fx:id="alignMenuSaveModel" text="_Save model" onAction="#saveModel"
                       accelerator="Shortcut+S"/>
             <MenuItem fx:id="fileMenuExit" text="E_xit" onAction="#exit"/>
         </Menu>
         <Menu fx:id="alignMenu" text="_Actions">
             <MenuItem fx:id="alignMenuCreateModel" text="_Create model" onAction="#createModel"
                       accelerator="Shortcut+X"/>
-            <MenuItem fx:id="alignMenuSaveModel" text="_Save model" onAction="#saveModel"
-                      accelerator="Shortcut+D"/>
-            <MenuItem fx:id="alignMenuLoadModel" text="Load _model" onAction="#loadModel"
-                      accelerator="Shortcut+M"/>
-            <MenuItem fx:id="alignMenuUnloadModel" text="_Unload model" onAction="#unloadModel"
-                      accelerator="Shortcut+U"/>
             <MenuItem fx:id="alignMenuLoadImages" text="_Load images" onAction="#loadImages"
                       accelerator="Shortcut+L"/>
-            <MenuItem fx:id="runMenuAlign" text="_Grayscale" onAction="#grayscale" accelerator="F2"/>
-            <MenuItem fx:id="runMenuCalculateResults" text="_Threshold" onAction="#threshold"
-                      accelerator="F3"/>
+            <MenuItem fx:id="runMenuAlign" text="_Process" onAction="#process" accelerator="F2"/>
+            <MenuItem fx:id="runMenuErode" text="_Erode" onAction="#erode" accelerator="F6"/>
+            <MenuItem fx:id="runMenuDilate" text="_Dilate" onAction="#dilate" accelerator="F7"/>
         </Menu>
         <Menu fx:id="optionsMenu" text="_Options">
-            <Menu fx:id="optionsMenuStain" text="_Stain">
-                <RadioMenuItem fx:id="optionsMenuStainDab" text="_Diaminobenzidine" onAction="#setDiaminobenzidine"
-                               accelerator="Shortcut+Alt+Shift+B">
-                    <toggleGroup>
-                        <ToggleGroup fx:id="stainToggleGroup"/>
-                    </toggleGroup>
-                </RadioMenuItem>
-                <RadioMenuItem fx:id="optionsMenuStainH" text="_Haematoxylin" onAction="#setHaematoxylin"
-                               toggleGroup="$stainToggleGroup"
-                               accelerator="Shortcut+Alt+Shift+H"/>
-            </Menu>
             <Menu fx:id="optionsMenuModel" text="_Model">
                 <RadioMenuItem fx:id="optionsMenuModelTypeOne" text="Type _One" onAction="#setTypeOne"
                                accelerator="Shortcut+Alt+Shift+O">
@@ -77,60 +61,51 @@
         <columnConstraints>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
             <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
-            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
         </columnConstraints>
         <rowConstraints>
-            <RowConstraints vgrow="NEVER" minHeight="30.0"/>
-            <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
             <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
         </rowConstraints>
-        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" GridPane.columnSpan="3" alignment="center">
-            <padding>
-                <Insets left="5" right="5" top="5" bottom="5"/>
-            </padding>
-                <Label fx:id="info" text=""/>
-        </VBox>
-        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="0" alignment="center">
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="createModelButton" text="Create model" onAction="#createModel"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="1" alignment="center">
-            <padding>
-                <Insets left="5" right="5" top="5" bottom="5"/>
-            </padding>
-            <Button fx:id="saveModelButton" text="Save model" onAction="#saveModel"
-                    prefWidth="120.0" GridPane.columnIndex="1"/>
-        </VBox>
-        <VBox spacing="5" GridPane.rowIndex="1" GridPane.columnIndex="2" alignment="center">
-            <padding>
-                <Insets left="5" right="5" top="5" bottom="5"/>
-            </padding>
-            <Button fx:id="loadModelButton" text="Load model" onAction="#loadModel"
-                    prefWidth="120.0" GridPane.columnIndex="1"/>
-        </VBox>
-        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="0" alignment="center">
+        <VBox fx:id="alignLeftVBox" spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
             <Button fx:id="loadImagesButton" text="Load images" onAction="#loadImages"
                     prefWidth="120.0" GridPane.columnIndex="1"/>
         </VBox>
-        <VBox fx:id="alignCenterVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="1" alignment="center">
+    </GridPane>
+    <GridPane GridPane.rowIndex="2">
+        <columnConstraints>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+            <ColumnConstraints hgrow="ALWAYS" minWidth="150.0"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints vgrow="ALWAYS" minHeight="50.0"/>
+        </rowConstraints>
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="0" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
-            <Button fx:id="grayscaleButton" text="Grayscale" onAction="#grayscale"
-                    prefWidth="120.0" GridPane.columnIndex="1"/>
+            <Button fx:id="processButton" text="Process" onAction="#process" prefWidth="120.0"/>
         </VBox>
-        <VBox fx:id="alignRightVBox" spacing="5" GridPane.rowIndex="2" GridPane.columnIndex="2" alignment="center">
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="1" alignment="center">
             <padding>
                 <Insets left="5" right="5" top="5" bottom="5"/>
             </padding>
-            <Button fx:id="thresholdButton" text="Threshold" onAction="#threshold"
-                    prefWidth="120.0" GridPane.columnIndex="1"/>
+            <Button fx:id="erodeButton" text="Erode" onAction="#erode" prefWidth="120.0"/>
+        </VBox>
+        <VBox spacing="5" GridPane.rowIndex="0" GridPane.columnIndex="2" alignment="center">
+            <padding>
+                <Insets left="5" right="5" top="5" bottom="5"/>
+            </padding>
+            <Button fx:id="dilateButton" text="Dilate" onAction="#dilate" prefWidth="120.0"/>
         </VBox>
     </GridPane>
 </GridPane>

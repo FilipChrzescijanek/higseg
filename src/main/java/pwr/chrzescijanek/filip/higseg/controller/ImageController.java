@@ -1,11 +1,8 @@
 package pwr.chrzescijanek.filip.higseg.controller;
 
 import static org.opencv.imgcodecs.Imgcodecs.imencode;
-import static pwr.chrzescijanek.filip.higseg.util.Utils.startTask;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,6 +14,8 @@ import java.util.concurrent.FutureTask;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
+import org.opencv.core.Point;
+import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import javafx.application.Platform;
@@ -27,7 +26,6 @@ import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
 import javafx.scene.Cursor;
@@ -54,7 +52,6 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Transform;
-import javafx.stage.Stage;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
 import pwr.chrzescijanek.filip.higseg.util.Coordinates;
@@ -401,45 +398,35 @@ public class ImageController extends BaseController implements Initializable {
         return Utils.getInitialMapping(image.get());
 	}
 
-	void grayscale(Map<TestRecord, Set<Coordinates>> mapping) {
+	void process(Map<TestRecord, Set<Coordinates>> mapping, String morphOperations) {
         if (image.get().channels() == 3) {
 			Mat result = Utils.createMat(image.get(), mapping);
+	        Imgproc.threshold(result, result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+	        for (char c : morphOperations.toCharArray()) {
+	        	if (c == 'e') {
+	        		Imgproc.erode(result, result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);		
+	        	} else if (c == 'd') {
+	        		Imgproc.dilate(result, result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);		
+	        	}
+	        }
 	        Platform.runLater(() -> image.set(result));
         }
     }
-
-	void threshold() {
+	
+	void erode() {
         if (image.get().channels() == 1) {
 	        Mat result = new Mat();
-	        Imgproc.threshold(image.get(), result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-	        Platform.runLater(() -> image.set(result));
+	        Imgproc.erode(image.get(), result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);
+			Platform.runLater(() -> image.set(result));
         }
     }
-
-    void writeImage(File selectedDirectory) {
-        if (selectedDirectory != null) {
-            if (selectedDirectory.canWrite()) {
-                final Task<Void> task = createWriteImagesTask(selectedDirectory);
-                startTask(task);
-            }
-            else
-                Platform.runLater(() -> showAlert("Save failed! Check your write permissions."));
+	
+	void dilate() {
+        if (image.get().channels() == 1) {
+	        Mat result = new Mat();
+	        Imgproc.dilate(image.get(), result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);
+		    Platform.runLater(() -> image.set(result));
         }
-    }
-
-    private Task<Void> createWriteImagesTask(final File selectedDirectory) {
-        return new Task<Void>() {
-            @Override
-            protected Void call() throws Exception {
-                try {
-                    String title = ((Stage) root.getScene().getWindow()).getTitle();
-                    Utils.writeImage(image.get(), selectedDirectory, title);
-                } catch (final IOException e) {
-                    handleException(e, "Save failed! Check your write permissions.");
-                }
-                return null;
-            }
-        };
     }
     
     List<Record> getRecords(List<String> attributes) {
