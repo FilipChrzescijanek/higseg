@@ -28,7 +28,10 @@ import com.google.gson.Gson;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanBinding;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -76,7 +79,7 @@ public class Controller extends BaseController implements Initializable {
 	private final ObservableList<ImageController> controllers         = FXCollections.observableArrayList();
 	private final ObservableList<ImageController> markableControllers = FXCollections.observableArrayList();
 
-	private StringBuilder morphOperations = new StringBuilder();
+	private final ObjectProperty<Classifier> classifier = new SimpleObjectProperty<Classifier>();
 
 	@FXML GridPane root;
 	@FXML MenuBar menuBar;
@@ -87,8 +90,6 @@ public class Controller extends BaseController implements Initializable {
 	@FXML MenuItem alignMenuCreateModel;
 	@FXML MenuItem alignMenuSaveModel;
 	@FXML MenuItem runMenuAlign;
-	@FXML MenuItem runMenuErode;
-	@FXML MenuItem runMenuDilate;
 	@FXML Menu optionsMenu;
 	@FXML Menu optionsMenuModel;
 	@FXML RadioMenuItem optionsMenuModelTypeOne;
@@ -107,9 +108,8 @@ public class Controller extends BaseController implements Initializable {
 	@FXML Button loadImagesButton;
 	@FXML VBox alignCenterVBox;
 	@FXML Button processButton;
-	@FXML Button erodeButton;
+	@FXML Button saveButton;
 	@FXML VBox alignRightVBox;
-	@FXML Button dilateButton;
 
 	@FXML
 	void about() {
@@ -188,7 +188,7 @@ public class Controller extends BaseController implements Initializable {
 					model.getClazzValues(), 
 					model.getRules().toString(), 
 					model.getStats().getMeans(), 
-					model.getStats().getVariances(), bottomValues, topValues, morphOperations.toString())));
+					model.getStats().getVariances(), bottomValues, topValues)));
 		}
 	}
 	
@@ -196,7 +196,6 @@ public class Controller extends BaseController implements Initializable {
 	void createModel() {
 		final List<File> selectedFiles = getImageFiles(root.getScene().getWindow());
 		if (selectedFiles != null && !selectedFiles.isEmpty()) {
-			morphOperations = new StringBuilder();
 			final Task<? extends Void> task = createLoadImagesTask(selectedFiles, true);
 			startTask(task);
 		}
@@ -257,6 +256,7 @@ public class Controller extends BaseController implements Initializable {
 	                controllers.remove(controller);
 	            });
             } else {
+            	controller.setClassifier(classifier);
             	markableControllers.add(controller);
 	            newStage.setOnHidden(e -> {
 	            	markableControllers.remove(controller);
@@ -284,6 +284,7 @@ public class Controller extends BaseController implements Initializable {
 	public void initialize(final URL location, final ResourceBundle resources) {	
 		initializeComponents(location, resources);
 		setBindings();
+		markableControllers.addListener((ListChangeListener<ImageController>) change -> classifier.set(null));
 	}
 	
 	private void setBindings() {
@@ -311,12 +312,9 @@ public class Controller extends BaseController implements Initializable {
 
 		runMenuAlign           .disableProperty().bind(Bindings.or(noImages, notCreating));
 		processButton          .disableProperty().bind(Bindings.or(noImages, notCreating));
-		erodeButton	           .disableProperty().bind(Bindings.or(noImages, notCreating));
-		dilateButton 	       .disableProperty().bind(Bindings.or(noImages, notCreating));
-		runMenuErode           .disableProperty().bind(Bindings.or(noImages, notCreating));
-		runMenuDilate 	       .disableProperty().bind(Bindings.or(noImages, notCreating));
 		loadImagesButton       .disableProperty().bind(Bindings.not(noImages));
 		alignMenuSaveModel     .disableProperty().bind(notCreating);
+		saveButton     .disableProperty().bind(notCreating);
 		optionsMenuModel       .disableProperty().bind(notCreating);
 	}
 	
@@ -330,42 +328,6 @@ public class Controller extends BaseController implements Initializable {
 				return null;
 			}
 		});
-	}
-	
-	@FXML
-	void erode() {
-		final Stage dialog = showPopup("Eroding...");
-		startTask(new Task<Void>() {
-			@Override
-			protected Void call() throws Exception {
-				erode(dialog);
-				return null;
-			}
-		});
-	}
-	
-	@FXML
-	void dilate() {
-		final Stage dialog = showPopup("Dillating...");
-		startTask(new Task<Void>() {
-			@Override
-			protected Void call() throws Exception {
-				dilate(dialog);
-				return null;
-			}
-		});
-	}
-
-	private void erode(final Stage dialog) {
-		morphOperations.append("e");
-        controllers.forEach(ImageController::erode);
-        Platform.runLater(() -> dialog.close());
-	}
-
-	private void dilate(final Stage dialog) {
-		morphOperations.append("d");
-        controllers.forEach(ImageController::dilate);
-        Platform.runLater(() -> dialog.close());
 	}
 	
 	private void process(final Stage dialog) {
@@ -386,7 +348,7 @@ public class Controller extends BaseController implements Initializable {
 	        controllersInitialMappings.forEach((controller, initialMapping) -> {
 	        	controller.process(initialMapping.entrySet()
 	        			.parallelStream()
-	        			.collect(Collectors.toMap(e -> mapping.get(e.getKey()), e -> e.getValue())), morphOperations.toString());
+	        			.collect(Collectors.toMap(e -> mapping.get(e.getKey()), e -> e.getValue())));
 	        });
         }
         
@@ -398,7 +360,9 @@ public class Controller extends BaseController implements Initializable {
         return c;
 	}
 
-	private Classifier buildClassifier(List<String> attributes) {  
+	private Classifier buildClassifier(List<String> attributes) {
+		if (classifier.isNotNull().get())
+			return classifier.get();
         String clazz = "stain";
         List<String> clazzValues = Arrays.asList(Decision.YES.toString(), Decision.NO.toString());
         
@@ -409,16 +373,17 @@ public class Controller extends BaseController implements Initializable {
 				.collect(Collectors.toList()));
         
 		if (optionsMenuModelTypeOne.isSelected())
-	        return buildTypeOneClassifier(attributes, clazz, clazzValues, records);
+	        classifier.set(buildTypeOneClassifier(attributes, clazz, clazzValues, records));
 	    else 
-	        return buildTypeTwoClassifier(attributes, clazz, clazzValues, records);
+	    	classifier.set(buildTypeTwoClassifier(attributes, clazz, clazzValues, records));
+		return classifier.get();
 	}
 
 	private Classifier buildTypeOneClassifier(List<String> attributes, String clazz, List<String> clazzValues,
 			List<Record> records) {
 		Map<String, Double> sharpValues = new HashMap<>();
-		sharpValues.put(Decision.YES.toString(),   0.0);
-		sharpValues.put(Decision.NO.toString(),  255.0);
+		sharpValues.put(Decision.YES.toString(), 255.0);
+		sharpValues.put(Decision.NO.toString(),    0.0);
 		
 		Classifier c = new TypeOneClassifier.Builder(new TypeOneFuzzifier(), new ConflictResolver(), new AttributeReductor())
 		        .withDefuzzifier(new CustomTypeOneDefuzzifier(sharpValues))
@@ -431,11 +396,11 @@ public class Controller extends BaseController implements Initializable {
 	private Classifier buildTypeTwoClassifier(List<String> attributes, String clazz, List<String> clazzValues,
 			List<Record> records) {
 		Map<String, Double> bottomSharpValues = new HashMap<>();
-		bottomSharpValues.put(Decision.YES.toString(),   0.0);
-		bottomSharpValues.put(Decision.NO.toString(),  240.0);
+		bottomSharpValues.put(Decision.YES.toString(), 240.0);
+		bottomSharpValues.put(Decision.NO.toString(),    0.0);
 		Map<String, Double> topSharpValues = new HashMap<>();
-		topSharpValues.put(Decision.YES.toString(),   15.0);
-		topSharpValues.put(Decision.NO.toString(),   255.0);
+		topSharpValues.put(Decision.YES.toString(), 255.0);
+		topSharpValues.put(Decision.NO.toString(),   15.0);
 		
 		Classifier c = new TypeTwoClassifier.Builder(new TypeTwoFuzzifier(), new ConflictResolver(), new AttributeReductor())
 		        .withDefuzzifier(new CustomTypeTwoDefuzzifier(bottomSharpValues, topSharpValues))

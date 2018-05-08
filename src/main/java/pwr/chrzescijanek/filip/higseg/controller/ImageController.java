@@ -14,8 +14,6 @@ import java.util.concurrent.FutureTask;
 
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfByte;
-import org.opencv.core.Point;
-import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
 import javafx.application.Platform;
@@ -52,6 +50,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Transform;
+import pwr.chrzescijanek.filip.fuzzyclassifier.Classifier;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.raw.Record;
 import pwr.chrzescijanek.filip.fuzzyclassifier.data.test.TestRecord;
 import pwr.chrzescijanek.filip.higseg.util.Coordinates;
@@ -66,8 +65,14 @@ public class ImageController extends BaseController implements Initializable {
     private final ObjectProperty<Mat> image = new SimpleObjectProperty<>();
     
     private final BooleanProperty markable = new SimpleBooleanProperty(false);
-    
-    private final List<Double> xPoints = new ArrayList<>();
+
+	ObjectProperty<Classifier> classifier;
+	
+    public void setClassifier(ObjectProperty<Classifier> classifier) {
+		this.classifier = classifier;
+	}
+
+	private final List<Double> xPoints = new ArrayList<>();
     private final List<Double> yPoints = new ArrayList<>();
 
 	@FXML GridPane root;
@@ -293,6 +298,7 @@ public class ImageController extends BaseController implements Initializable {
 				}
 				xPoints.clear();
 				yPoints.clear();
+				classifier.set(null);
 			}
 		});
 		imageViewGroup.setOnScroll(event -> {
@@ -398,37 +404,14 @@ public class ImageController extends BaseController implements Initializable {
         return Utils.getInitialMapping(image.get());
 	}
 
-	void process(Map<TestRecord, Set<Coordinates>> mapping, String morphOperations) {
+	void process(Map<TestRecord, Set<Coordinates>> mapping) {
         if (image.get().channels() == 3) {
 			Mat result = Utils.createMat(image.get(), mapping);
 	        Imgproc.threshold(result, result, 0, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-	        for (char c : morphOperations.toCharArray()) {
-	        	if (c == 'e') {
-	        		Imgproc.erode(result, result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);		
-	        	} else if (c == 'd') {
-	        		Imgproc.dilate(result, result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);		
-	        	}
-	        }
 	        Platform.runLater(() -> image.set(result));
         }
     }
 	
-	void erode() {
-        if (image.get().channels() == 1) {
-	        Mat result = new Mat();
-	        Imgproc.erode(image.get(), result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);
-			Platform.runLater(() -> image.set(result));
-        }
-    }
-	
-	void dilate() {
-        if (image.get().channels() == 1) {
-	        Mat result = new Mat();
-	        Imgproc.dilate(image.get(), result, Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(3, 3)), new Point(3.0/2, 3.0/2), 1);
-		    Platform.runLater(() -> image.set(result));
-        }
-    }
-    
     List<Record> getRecords(List<String> attributes) {
     	List<Record> records = new ArrayList<>();
     	Mat rgb = image.get();
