@@ -242,7 +242,8 @@ public class ImageController extends BaseController implements Initializable {
 	private void initializeStyle() {
 		injectStylesheets(root);
 		canvas.setOpacity(0.5);
-		canvas.getGraphicsContext2D().setFill  (Color.BLACK);
+		canvas.getGraphicsContext2D().setFill(Color.color(1.0, 0.0, 0.0, 0.05));
+		canvas.getGraphicsContext2D().setStroke(Color.RED);
 	}
 	
 	private void setImageViewControls(final ImageView imageView, final ScrollPane imageScrollPane,
@@ -262,9 +263,9 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.setOnMousePressed(event -> {
 			if (markable.get()) {
 				if (modeMark.isSelected()) {
-					canvas.getGraphicsContext2D().setStroke(Color.BLACK);
+					canvas.getGraphicsContext2D().setLineWidth(2.0);
 				} else {
-					canvas.getGraphicsContext2D().setStroke(Color.RED);
+					canvas.getGraphicsContext2D().setLineWidth(4.0);
 				}
 			}
 		});
@@ -284,6 +285,11 @@ public class ImageController extends BaseController implements Initializable {
 		canvas.setOnMouseReleased(event -> {
 			if (markable.get()) {
 				if (modeMark.isSelected()) {
+					canvas.getGraphicsContext2D().strokePolygon(
+						xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+						yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
+						xPoints.size()
+					);
 					canvas.getGraphicsContext2D().fillPolygon(
 								xPoints.stream().mapToDouble(Double::doubleValue).toArray(),
 								yPoints.stream().mapToDouble(Double::doubleValue).toArray(),
@@ -294,7 +300,7 @@ public class ImageController extends BaseController implements Initializable {
 					double minY = yPoints.stream().mapToDouble(Double::doubleValue).min().orElse(0.0);
 					double maxX = xPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
 					double maxY = yPoints.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
-					canvas.getGraphicsContext2D().clearRect(minX - 1.0, minY - 1.0, maxX - minX + 2.0, maxY - minY + 2.0);
+					canvas.getGraphicsContext2D().clearRect(minX - 3.0, minY - 3.0, maxX - minX + 5.0, maxY - minY + 5.0);
 				}
 				xPoints.clear();
 				yPoints.clear();
