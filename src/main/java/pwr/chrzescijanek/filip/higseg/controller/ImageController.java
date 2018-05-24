@@ -189,6 +189,7 @@ public class ImageController extends BaseController implements Initializable {
 	@FXML
 	void eraseAll() {
 		canvas.getGraphicsContext2D().clearRect(0, 0, canvas.getWidth(), canvas.getHeight());
+		classifier.set(null);
 	}
 
 	@Override

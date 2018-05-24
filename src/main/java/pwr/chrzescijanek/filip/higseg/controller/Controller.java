@@ -285,6 +285,7 @@ public class Controller extends BaseController implements Initializable {
 		initializeComponents(location, resources);
 		setBindings();
 		markableControllers.addListener((ListChangeListener<ImageController>) change -> classifier.set(null));
+		modelToggleGroup.selectedToggleProperty().addListener(change -> classifier.set(null));
 	}
 	
 	private void setBindings() {
@@ -396,11 +397,11 @@ public class Controller extends BaseController implements Initializable {
 	private Classifier buildTypeTwoClassifier(List<String> attributes, String clazz, List<String> clazzValues,
 			List<Record> records) {
 		Map<String, Double> bottomSharpValues = new HashMap<>();
-		bottomSharpValues.put(Decision.YES.toString(), 240.0);
+		bottomSharpValues.put(Decision.YES.toString(), 128.0);
 		bottomSharpValues.put(Decision.NO.toString(),    0.0);
 		Map<String, Double> topSharpValues = new HashMap<>();
 		topSharpValues.put(Decision.YES.toString(), 255.0);
-		topSharpValues.put(Decision.NO.toString(),   15.0);
+		topSharpValues.put(Decision.NO.toString(),  127.0);
 		
 		Classifier c = new TypeTwoClassifier.Builder(new TypeTwoFuzzifier(), new ConflictResolver(), new AttributeReductor())
 		        .withDefuzzifier(new CustomTypeTwoDefuzzifier(bottomSharpValues, topSharpValues))
